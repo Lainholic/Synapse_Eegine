@@ -1,0 +1,4747 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Synapse Engine (시냅스 엔진) — 인터랙티브 AI 롤플레이</title>
+  <style>
+/* Synapse Engine Theme - Clean, Immersive & Perfect Mobile Responsive */
+:root {
+  --bg-main: #0c101c;
+  --bg-card: rgba(20, 27, 45, 0.98);
+  --bg-card-sub: rgba(14, 19, 32, 0.95);
+  --accent-cyan: #00f0ff;
+  --accent-magenta: #ff6b9d;
+  --accent-blue: #3b82f6;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border-color: rgba(0, 240, 255, 0.18);
+  --border-focus: rgba(0, 240, 255, 0.6);
+  --font-base: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-base);
+}
+
+.app-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 딤 오버레이 */
+.drawer-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 80;
+}
+
+.drawer-overlay.active {
+  display: block;
+}
+
+/* [좌측 설정창 패널 - 화면을 가리지 않도록 슬라이드 오버레이] */
+.left-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 360px;
+  max-width: 85vw;
+  height: 100%;
+  height: 100dvh;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 6px 0 30px rgba(0, 0, 0, 0.8);
+  z-index: 90;
+  transform: translateX(-100%); /* 기본 상태: 닫혀있음 */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.left-panel.open {
+  transform: translateX(0); /* 열림 상태 */
+}
+
+.panel-inner-scroll {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 40px;
+}
+
+/* 스케치 중앙 돌출 반원 탭 버튼 (핸들) */
+.drawer-handle-tab {
+  position: absolute;
+  top: 50%;
+  right: -36px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 68px;
+  background: rgba(20, 27, 45, 0.98);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 18px 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--accent-cyan);
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  transition: all 0.2s;
+}
+
+.drawer-handle-tab:hover {
+  background: rgba(0, 240, 255, 0.25);
+  color: #fff;
+  box-shadow: 0 0 15px var(--accent-cyan);
+}
+
+.handle-icon {
+  font-size: 0.85rem;
+  transition: transform 0.3s ease;
+  transform: rotate(180deg); /* 닫혀있을 때 오른쪽 화살표 ▶ */
+}
+
+.left-panel.open .handle-icon {
+  transform: rotate(0deg); /* 열려있을 때 왼쪽 화살표 ◀ */
+}
+
+/* Sections */
+.panel-section {
+  background: var(--bg-card-sub);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* Accordion */
+.accordion-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.accordion-toggle:hover .section-title {
+  color: #fff;
+  text-shadow: 0 0 8px var(--accent-cyan);
+}
+
+.toggle-icon {
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  transition: transform 0.25s ease;
+}
+
+.accordion-section.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.accordion-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.25s ease;
+}
+
+.accordion-section.collapsed .accordion-content {
+  display: none;
+}
+
+.accordion-section.collapsed .section-header {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Chips */
+.btn-chip-group {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.chip-btn {
+  flex: 1;
+  background: rgba(8, 12, 22, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 8px 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.chip-btn:hover {
+  border-color: var(--accent-cyan);
+  color: #fff;
+}
+
+.chip-btn.active {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+/* Form Styles */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.label-with-val {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.val-badge {
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.form-select, .form-input, .form-textarea {
+  width: 100%;
+  background: rgba(8, 12, 22, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.form-textarea {
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.form-range {
+  width: 100%;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.form-select:focus, .form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+/* Buttons */
+.btn-mini {
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid var(--border-color);
+  color: var(--accent-cyan);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-mini:hover {
+  background: var(--accent-cyan);
+  color: #0c101c;
+  box-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.btn-block {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(59, 130, 246, 0.3) 100%);
+  border: 1px solid var(--accent-cyan);
+  color: var(--text-main);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
+  color: #0c101c;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.btn-danger:hover {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 10px #ef4444;
+}
+
+/* Char Card */
+.char-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.avatar-frame {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  background: #1e293b;
+}
+
+.char-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.char-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.char-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.char-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.char-tag {
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--accent-cyan);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   [우측 메인 스테이지 - 화면 전체 100% 꽉 찬 대화 및 입력창]
+   ========================================================================== */
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  position: relative;
+  background: rgba(10, 14, 24, 0.7);
+  overflow: hidden;
+}
+
+/* 상단 헤더: [얼굴] + [속마음] (스케치 그대로 구현) */
+.chat-header {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(14, 20, 35, 0.96);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  z-index: 10;
+}
+
+/* 상단 헤더 언어 빠른 전환 국기/텍스트 캡슐군 (고대비 선명 디자인) */
+.header-lang-flags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(8, 14, 26, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 3px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.btn-flag-mini {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.btn-flag-mini:hover {
+  background: rgba(0, 240, 255, 0.2);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  transform: translateY(-1px);
+}
+
+.btn-flag-mini.active {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(59, 130, 246, 0.35) 100%);
+  color: var(--accent-cyan);
+  border: 1.5px solid var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  font-weight: 800;
+}
+
+.header-face-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: fit-content;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 3px 8px 3px 4px;
+  border-radius: 20px;
+}
+
+.face-avatar-box {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--accent-cyan);
+  background: #1e293b;
+}
+
+.header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-face-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.header-thought-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.thought-box {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 107, 157, 0.08);
+  border: 1px dashed rgba(255, 107, 157, 0.4);
+  padding: 4px 8px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.thought-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-magenta);
+  white-space: nowrap;
+}
+
+.thought-text {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #fbcfe8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 대화 뷰포트 (남은 화면 100% 채움) */
+.chat-viewport {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-bubble {
+  max-width: 88%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  line-height: 1.6;
+  font-size: 0.92rem;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.assistant-msg {
+  align-self: flex-start;
+  background: rgba(22, 32, 54, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-bottom-left-radius: 2px;
+}
+
+.user-msg {
+  align-self: flex-end;
+  background: rgba(30, 58, 138, 0.85);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-bottom-right-radius: 2px;
+}
+
+.msg-sender {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.user-msg .msg-sender {
+  color: #93c5fd;
+  text-align: right;
+}
+
+.msg-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rp-dialogue {
+  color: #fef08a;
+  font-weight: 600;
+}
+
+.rp-action {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.loading-bubble {
+  color: var(--accent-cyan);
+  font-style: italic;
+}
+
+.spinner {
+  display: inline-block;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 하단 입력 영역 - 화면 하단에 항상 고정 (Safe Area 완벽 지원) */
+.chat-footer {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background: rgba(14, 20, 35, 0.98);
+  border-top: 1px solid var(--border-color);
+  z-index: 10;
+}
+
+/* 대화 검색 바 */
+.chat-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(16, 24, 42, 0.98);
+  border-bottom: 1px solid var(--accent-cyan);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.2s ease-out;
+  z-index: 15;
+}
+
+.search-icon {
+  font-size: 0.9rem;
+}
+
+.search-input {
+  flex: 1;
+  background: rgba(8, 12, 22, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+}
+
+.search-count {
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.btn-search-nav, .btn-search-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-search-nav:hover {
+  background: var(--accent-cyan);
+  color: #0c101c;
+}
+
+.btn-search-close:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* 검색 하이라이트 */
+.search-highlight {
+  background-color: #facc15;
+  color: #000;
+  font-weight: 700;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.search-highlight.current {
+  background-color: #ff0077;
+  color: #fff;
+  box-shadow: 0 0 8px #ff0077;
+}
+
+/* 모바일 퀵 심볼 바 */
+.chat-quick-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.btn-quick-symbol {
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: var(--accent-cyan);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.btn-quick-symbol:hover, .btn-quick-symbol:active {
+  background: var(--accent-cyan);
+  color: #0c101c;
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+
+.input-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.rp-input {
+  flex: 1;
+  background: rgba(8, 12, 22, 0.95);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: none;
+  height: 44px;
+  max-height: 90px;
+  line-height: 1.3;
+  transition: all 0.2s;
+}
+
+.rp-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+}
+
+.btn-send {
+  background: linear-gradient(135deg, #00f0ff 0%, #0077ff 100%);
+  border: none;
+  border-radius: 10px;
+  color: #040814;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0 16px;
+  height: 44px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-send:hover {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+}
+
+.btn-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Toast */
+.rp-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(0, 240, 255, 0.9);
+  color: #080e1a;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 1000;
+}
+
+.rp-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Bubble Header & Action Buttons (Edit / Delete) */
+.bubble-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.msg-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.chat-bubble:hover .msg-actions {
+  opacity: 1;
+}
+
+.btn-msg-action {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-msg-action:hover {
+  background: rgba(0, 240, 255, 0.2);
+  color: #fff;
+  border-color: var(--accent-cyan);
+}
+
+.btn-msg-delete:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  border-color: #ef4444;
+}
+
+/* Edit Mode Box inside Bubble */
+.bubble-edit-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.bubble-edit-textarea {
+  width: 100%;
+  background: rgba(8, 12, 22, 0.95);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.bubble-edit-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* Memory & Backup Grid */
+.memory-status-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.memory-info-text {
+  font-size: 0.78rem;
+  color: #67e8f9;
+  font-family: var(--font-mono);
+}
+
+.btn-grid-dual {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.btn-grid-dual .btn-mini {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  font-size: 0.78rem;
+}
+
+.btn-msg-resend:hover {
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+  border-color: #3b82f6;
+}
+
+/* Long-Term Memory Notes UI */
+.memory-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.memory-notes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.memory-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.memory-note-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #e2e8f0;
+}
+
+.memory-note-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.btn-del-mem {
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.btn-del-mem:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.empty-note-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-align: center;
+  padding: 10px 0;
+  font-style: italic;
+}
+
+/* NAI Generated Illustration inside Chat Bubble */
+.nai-bubble-img-wrapper {
+  margin-top: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  max-width: 320px;
+}
+
+.nai-bubble-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Memory Guide Box & API Key Guide Box */
+.memory-guide-box, .api-guide-box {
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px dashed rgba(0, 240, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.api-guide-box {
+  border-color: rgba(255, 215, 0, 0.35);
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.api-guide-box .guide-title {
+  color: #ffd700;
+}
+
+.guide-title {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.guide-desc strong {
+  color: #fff;
+}
+
+.btn-text-danger {
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: all 0.2s;
+}
+
+.btn-text-danger:hover {
+  color: #ef4444;
+  text-decoration: underline;
+}
+
+/* Font Size & Line Height Dynamic Classes on Chat Log */
+.chat-viewport.font-small .chat-bubble { font-size: 0.82rem; }
+.chat-viewport.font-medium .chat-bubble { font-size: 0.92rem; }
+.chat-viewport.font-large .chat-bubble { font-size: 1.05rem; }
+.chat-viewport.font-xlarge .chat-bubble { font-size: 1.2rem; }
+
+.chat-viewport.lh-compact .chat-bubble { line-height: 1.35; }
+.chat-viewport.lh-normal .chat-bubble { line-height: 1.6; }
+.chat-viewport.lh-relaxed .chat-bubble { line-height: 1.85; }
+
+/* National Flag Language Buttons */
+.lang-flag-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.lang-flag-group .chip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 6px;
+  font-size: 0.85rem;
+}
+
+.flag-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+/* ============================================================================
+ * [Help Guide & Precautions Styling]
+ * ============================================================================ */
+.guide-block {
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.guide-subtitle {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.guide-list-num,
+.guide-list-bullet {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guide-block strong {
+  color: #fff;
+}
+
+.guide-block.alert-block {
+  background: rgba(255, 107, 157, 0.08);
+  border: 1px solid rgba(255, 107, 157, 0.28);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.guide-block.alert-block .guide-subtitle {
+  color: var(--accent-magenta);
+}
+
+</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- 모바일/화면 딤 배경 -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+
+    <!-- [좌측 설정창 패널] -->
+    <aside class="left-panel collapsed" id="leftPanel">
+      
+      <!-- 패널 접힘/펼침 핸들 버튼 -->
+      <button type="button" class="drawer-handle-tab" id="btnToggleSideHandle" title="설정창 열기/닫기">
+        <span class="handle-icon">◀</span>
+      </button>
+
+      <div class="panel-inner-scroll">
+        <!-- 1. 캐릭터 선택 및 요약 카드 -->
+        <section class="panel-section character-section">
+          <div class="section-header">
+            <h2 class="section-title" id="titleCharSelect">캐릭터 선택</h2>
+            <div class="header-btns">
+              <button type="button" class="btn-mini" id="btnImportCard" title="외부 캐릭터 카드(.png, .json) 가져오기">카드 추가</button>
+              <input type="file" id="cardFileInput" accept=".png,.json" style="display: none;">
+            </div>
+          </div>
+
+          <!-- 캐릭터 선택 셀렉트 박스 -->
+          <div class="form-group">
+            <select id="charSelect" class="form-select"></select>
+          </div>
+
+          <!-- 캐릭터 카드 뷰 (얼굴 이미지 & 기본 정보) -->
+          <div class="char-profile-card">
+            <div class="avatar-frame">
+              <img id="charAvatar" src="" alt="캐릭터 아바타" class="char-avatar-img">
+            </div>
+            <div class="char-info">
+              <h3 class="char-name" id="charName">-</h3>
+              <div class="char-tags" id="charTags"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. [내 페르소나 관리] -->
+        <section class="panel-section accordion-section" id="sectionUserPersona">
+          <div class="section-header accordion-toggle" data-target="userPersonaContent">
+            <h2 class="section-title" id="titleUserPersona">내 페르소나 관리</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="userPersonaContent">
+            <div class="form-group">
+              <div class="label-with-val">
+                <label for="selectUserPersona">페르소나 슬롯</label>
+                <button type="button" class="btn-mini" id="btnCreateNewPersona">+ 새 페르소나</button>
+              </div>
+              <select id="selectUserPersona" class="form-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="inputUserName">내 이름 / 호칭</label>
+              <input type="text" id="inputUserName" class="form-input" value="당신" placeholder="이 페르소나의 이름/호칭">
+            </div>
+
+            <div class="form-group">
+              <label for="inputUserPersona">내 성격 / 외형 / 관계 설정</label>
+              <textarea id="inputUserPersona" class="form-textarea" rows="4" placeholder="예: 차분하고 다정한 성격. 위무선의 오랜 동문. 영력이 높은 고소 남씨 출신 수사."></textarea>
+            </div>
+
+            <div class="btn-grid-dual">
+              <button type="button" class="btn-mini btn-primary" id="btnSaveUserPersona">현재 페르소나 저장</button>
+              <button type="button" class="btn-mini btn-danger" id="btnDeleteUserPersona" title="현재 선택된 페르소나 삭제">페르소나 삭제</button>
+            </div>
+            
+            <div class="btn-grid-dual" style="margin-top: 4px;">
+              <button type="button" class="btn-mini" id="btnExportPersonas" title="내가 만든 모든 페르소나들을 JSON 파일로 백업/저장">페르소나 파일 저장</button>
+              <button type="button" class="btn-mini" id="btnImportPersonas" title="저장해둔 페르소나 파일 불러오기">페르소나 파일 불러오기</button>
+              <input type="file" id="personaFileInput" accept=".json" style="display: none;">
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. [세션 간 장기 기억 (메모리 노트)] -->
+        <section class="panel-section accordion-section collapsed" id="sectionLongTermMemory">
+          <div class="section-header accordion-toggle" data-target="longTermMemoryContent">
+            <h2 class="section-title" id="titleMemory">장기 기억 노트 (메모리)</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="longTermMemoryContent">
+            <!-- 기억 저장 위치 안내 가이드 -->
+            <div class="memory-guide-box">
+              <span class="guide-title">저장 안내:</span>
+              <p class="guide-desc">장기 기억은 외부 서버가 아닌 <strong>이 기기의 브라우저 내부(localStorage)</strong>에 안전하게 보관됩니다. 아래에서 개별 삭제하거나 전체 삭제로 언제든 깔끔하게 정리할 수 있습니다.</p>
+            </div>
+
+            <div class="memory-input-group">
+              <textarea id="inputNewMemory" class="form-textarea" rows="2" placeholder="캐릭터가 영구히 기억할 중요한 사건, 약속, 사실을 입력하세요 (예: 지난밤 처마 밑에서 천자소를 마심)"></textarea>
+              <div class="btn-grid-dual">
+                <button type="button" class="btn-mini btn-primary" id="btnAddMemoryNote">기억 추가</button>
+                <button type="button" class="btn-mini" id="btnSummarizeChat" title="지금까지 나눈 대화를 AI가 자동으로 3줄 압축하여 장기 기억에 등록">✨ 대화 AI 자동요약</button>
+              </div>
+            </div>
+
+            <div class="memory-notes-container">
+              <div class="label-with-val">
+                <span class="sub-label">보존 중인 핵심 기억 목록:</span>
+                <button type="button" class="btn-text-danger" id="btnClearAllMemoryNotes" title="등록된 모든 장기 기억 한번에 삭제">전체 비우기</button>
+              </div>
+              <div class="memory-notes-list" id="memoryNotesList">
+                <div class="empty-note-hint">등록된 장기 기억이 없습니다.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. [커스텀 프롬프트 입력란] -->
+        <section class="panel-section accordion-section collapsed" id="sectionPrompt">
+          <div class="section-header accordion-toggle" data-target="promptContent">
+            <h2 class="section-title" id="titlePrompt">프롬프트 입력란</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="promptContent">
+            <div class="form-group">
+              <label for="editCustomPrompt">추가 시스템 프롬프트 / 특별 지침</label>
+              <textarea id="editCustomPrompt" class="form-textarea" rows="4" placeholder="AI에게 전달할 특별 프롬프트/규칙을 자유롭게 작성하세요"></textarea>
+            </div>
+            <button type="button" class="btn-block btn-primary" id="btnSavePrompt">프롬프트 저장</button>
+          </div>
+        </section>
+
+        <!-- 6. [AI 모델 설정] (구글 / 오픈라우터 / 커스텀) -->
+        <section class="panel-section accordion-section collapsed" id="sectionApi">
+          <div class="section-header accordion-toggle" data-target="apiContent">
+            <h2 class="section-title" id="titleAiModel">AI 모델 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="apiContent">
+            <!-- 제공자 선택 -->
+            <div class="form-group">
+              <label for="selectProvider">AI 제공자 (Provider)</label>
+              <select id="selectProvider" class="form-select">
+                <option value="gemini" selected>Google Gemini (공식 / 고속)</option>
+                <option value="openrouter">OpenRouter (오픈라우터)</option>
+                <option value="claude">Anthropic Claude (공식 직결)</option>
+                <option value="custom">커스텀 (Custom API / OpenAI 호환 / Ollama)</option>
+              </select>
+            </div>
+
+            <!-- 커스텀 API Base URL (커스텀 선택 시 표시) -->
+            <div class="form-group" id="groupCustomBaseUrl" style="display: none;">
+              <label for="inputCustomBaseUrl">API Base URL</label>
+              <input type="text" id="inputCustomBaseUrl" class="form-input" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1 또는 http://localhost:11434/v1">
+            </div>
+
+            <!-- API Key -->
+            <div class="form-group">
+              <label for="inputApiKey">API Key</label>
+              <input type="password" id="inputApiKey" class="form-input" placeholder="API 키를 입력하세요 (Ollama 사용 시 비워둠 가능)">
+            </div>
+
+            <!-- API Key 저장 위치 및 유실 방지 안내 팁 -->
+            <div class="api-guide-box" id="apiKeyGuideBox">
+              <span class="guide-title">🔒 보안 및 저장 안내:</span>
+              <p class="guide-desc" id="apiKeyGuideDesc">입력하신 API Key는 외부 서버로 전송되지 않고 <strong>이 기기의 브라우저 내부(IndexedDB)</strong>에 안전하게 보관됩니다. 브라우저 캐시 삭제 시 초기화될 수 있으니 키를 별도로 잘 보관해 두세요.</p>
+            </div>
+
+            <!-- 모델 선택 or 입력 -->
+            <div class="form-group" id="groupSelectModel">
+              <div class="label-with-val">
+                <label for="selectModel">사용 모델</label>
+                <button type="button" class="btn-mini" id="btnFetchOpenRouterModels" title="현재 제공자의 최신 지원 모델 목록을 실시간 조회">목록 갱신</button>
+              </div>
+              <select id="selectModel" class="form-select"></select>
+            </div>
+
+            <div class="form-group" id="groupInputCustomModel" style="display: none;">
+              <label for="inputCustomModel">모델명 직접 입력</label>
+              <input type="text" id="inputCustomModel" class="form-input" placeholder="예: claude-3-5-sonnet, gpt-4o, llama-3.3-70b">
+            </div>
+
+            <button type="button" class="btn-block btn-primary" id="btnSaveSettings">AI 모델 설정 저장</button>
+          </div>
+        </section>
+
+        <!-- 7. [NovelAI (NAI) 실시간 삽화 설정] (신규) -->
+        <section class="panel-section accordion-section collapsed" id="sectionNai">
+          <div class="section-header accordion-toggle" data-target="naiContent">
+            <h2 class="section-title" id="titleNai">NovelAI (NAI) 삽화 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="naiContent">
+            <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+              <label for="toggleNaiEnabled" style="margin: 0; cursor: pointer;">NAI 삽화 생성 기능 켜기</label>
+              <input type="checkbox" id="toggleNaiEnabled" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-cyan);">
+            </div>
+
+            <div class="form-group">
+              <label for="inputNaiApiKey">NovelAI API Key (Persistent Key)</label>
+              <input type="password" id="inputNaiApiKey" class="form-input" placeholder="pst-... 또는 API 토큰 입력">
+            </div>
+
+            <!-- 삽화 생성 방식 (수동 / 클라이맥스 자동 / N턴마다) -->
+            <div class="form-group">
+              <label for="selectNaiTriggerMode">삽화 생성 발동 방식</label>
+              <select id="selectNaiTriggerMode" class="form-select">
+                <option value="manual" selected>수동 생성 ([🎨 삽화] 버튼 클릭 시에만)</option>
+                <option value="auto_climax">클라이맥스 자동 감지 (중요 장면에 AI가 스스로 생성)</option>
+                <option value="turn_interval">턴 수 주기 자동 생성 (N턴마다 정기 생성)</option>
+              </select>
+            </div>
+
+            <!-- N턴마다 주기 입력창 (상시 노출) -->
+            <div class="form-group" id="groupNaiTurnInterval">
+              <div class="label-with-val">
+                <label for="inputNaiTurnInterval">삽화 생성 주기 설정</label>
+                <span id="turnIntervalDisplay" class="val-badge">5턴 마다 생성</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" id="inputNaiTurnInterval" class="form-input" min="1" max="50" value="5" style="width: 80px; text-align: center; font-weight: bold; color: var(--accent-cyan);">
+                <span style="font-size: 0.85rem; color: var(--text-main);">턴 대화마다 자동 생성</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="selectNaiModel">NAI 확산 모델</label>
+              <select id="selectNaiModel" class="form-select">
+                <option value="nai-diffusion-5-full" selected>NovelAI Diffusion V5 Full (최신 최상위 플래그십)</option>
+                <option value="nai-diffusion-5-curated">NovelAI Diffusion V5 Curated (V5 정제형)</option>
+                <option value="nai-diffusion-4-full">NovelAI Diffusion V4.5 / V4 Full</option>
+                <option value="nai-diffusion-4-curated">NovelAI Diffusion V4.5 / V4 Curated</option>
+                <option value="nai-diffusion-3">NovelAI Diffusion V3 (Anime v3)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="inputNaiPositive">기본 긍정 프롬프트 (품질/화풍 태그)</label>
+              <textarea id="inputNaiPositive" class="form-textarea" rows="2" placeholder="masterpiece, best quality, aesthetic, highly detailed, beautiful lighting, cinematic"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="inputNaiNegative">네거티브 프롬프트 (제외할 요소)</label>
+              <textarea id="inputNaiNegative" class="form-textarea" rows="2" placeholder="lowres, bad anatomy, bad hands, text, error, blurry, worst quality"></textarea>
+            </div>
+
+            <button type="button" class="btn-block btn-primary" id="btnSaveNaiSettings">NAI 삽화 설정 저장</button>
+          </div>
+        </section>
+
+        <!-- 8. [대화 백업 및 복원] -->
+        <section class="panel-section accordion-section collapsed" id="sectionMemoryBackup">
+          <div class="section-header accordion-toggle" data-target="memoryBackupContent">
+            <h2 class="section-title" id="titleBackup">대화 백업 및 내보내기</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="memoryBackupContent">
+            <div class="btn-grid-dual">
+              <button type="button" class="btn-mini btn-primary" id="btnExportChatJson" title="JSON 백업 파일로 저장">대화 백업(저장)</button>
+              <button type="button" class="btn-mini btn-primary" id="btnImportChatJson" title="백업 파일 불러오기">대화 복원(불러오기)</button>
+              <input type="file" id="chatBackupFileInput" accept=".json,.txt" style="display: none;">
+            </div>
+
+            <div class="btn-grid-dual">
+              <button type="button" class="btn-mini" id="btnExportChatTxt" title="소설 형태의 읽기용 TXT 텍스트로 내보내기">텍스트(TXT) 추출</button>
+              <button type="button" class="btn-mini btn-danger" id="btnClearCurrentMemory" title="현재 캐릭터와의 대화 기록 초기화">대화 초기화</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. [문체 설정] -->
+        <section class="panel-section accordion-section collapsed" id="sectionNarrative">
+          <div class="section-header accordion-toggle" data-target="narrativeContent">
+            <h2 class="section-title" id="titleNarrative">문체 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="narrativeContent">
+            <div class="form-group">
+              <label>서술 분량</label>
+              <div class="btn-chip-group" id="lengthChipGroup">
+                <button type="button" class="chip-btn" data-length="short">단문</button>
+                <button type="button" class="chip-btn active" data-length="standard">표준</button>
+                <button type="button" class="chip-btn" data-length="long">장문</button>
+                <button type="button" class="chip-btn" data-length="epic">초장문</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="selectNarrativeStyle">지문 및 대사 비중</label>
+              <select id="selectNarrativeStyle" class="form-select">
+                <option value="balanced" selected>균형형 (지문 50% : 대사 50%)</option>
+                <option value="novel">지문 중심 (지문 70% : 대사 30% / 서사 중심)</option>
+                <option value="talk">대화 중심 (지문 30% : 대사 70% / 티키타카)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <div class="label-with-val">
+                <label for="inputTemperature">창의성 (Temperature)</label>
+                <span id="tempValDisplay" class="val-badge">0.85</span>
+              </div>
+              <input type="range" id="inputTemperature" min="0.2" max="1.3" step="0.05" value="0.85" class="form-range">
+            </div>
+          </div>
+        </section>
+
+        <!-- 10. [대화창 뷰어 설정] (글자 크기 & 줄간격) (신규) -->
+        <section class="panel-section accordion-section collapsed" id="sectionViewerStyle">
+          <div class="section-header accordion-toggle" data-target="viewerStyleContent">
+            <h2 class="section-title" id="titleViewerStyle">대화창 글자 크기 / 뷰어 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="viewerStyleContent">
+            <div class="form-group">
+              <label>글자 크기 (Font Size)</label>
+              <div class="btn-chip-group" id="fontSizeChipGroup">
+                <button type="button" class="chip-btn" data-size="small">작게</button>
+                <button type="button" class="chip-btn active" data-size="medium">보통</button>
+                <button type="button" class="chip-btn" data-size="large">크게</button>
+                <button type="button" class="chip-btn" data-size="xlarge">아주크게</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>줄간격 (Line Height)</label>
+              <div class="btn-chip-group" id="lineHeightChipGroup">
+                <button type="button" class="chip-btn" data-lh="compact">조밀하게</button>
+                <button type="button" class="chip-btn active" data-lh="normal">표준</button>
+                <button type="button" class="chip-btn" data-lh="relaxed">넓게</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11. [사용 가이드 / 기능 안내 / 필수 주의사항] -->
+        <section class="panel-section accordion-section collapsed" id="sectionHelpGuide">
+          <div class="section-header accordion-toggle" data-target="helpGuideContent">
+            <h2 class="section-title" id="titleHelpGuide">📖 가이드 & 주의사항</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="helpGuideContent">
+            
+            <!-- 3단계 시작 가이드 -->
+            <div class="guide-block">
+              <h3 class="guide-subtitle">🚀 3단계 초간단 시작법</h3>
+              <ol class="guide-list-num">
+                <li><strong>API Key 입력</strong>: 위쪽 [AI 모델 설정]에서 Gemini 또는 OpenRouter API 키를 입력합니다. (기기 내부에만 안전 보관)</li>
+                <li><strong>캐릭터 카드 추가</strong>: 소장 중인 Tavern V2 카드(.png / .json)를 화면에 드래그하거나 [카드 추가]를 누릅니다.</li>
+                <li><strong>대화 시작</strong>: 하단 입력창에 지문(*...*)과 대사("...")를 입력하고 전송합니다.</li>
+              </ol>
+            </div>
+
+            <!-- 5대 핵심 기능 -->
+            <div class="guide-block">
+              <h3 class="guide-subtitle">✨ 주요 기능 안내</h3>
+              <ul class="guide-list-bullet">
+                <li><strong>소설형 지문/대사</strong>: 대사는 큰따옴표(""), 지문은 별표(**)로 자동 깔끔 렌더링.</li>
+                <li><strong>은밀한 속마음</strong>: 캐릭터의 히든 속마음(&lt;thought&gt;)은 상단 전용 뷰어에 분리 표시.</li>
+                <li><strong>모바일 퀵 심볼 바</strong>: 키보드 위 원터치 버튼으로 따옴표, 별표, 괄호 즉시 입력.</li>
+                <li><strong>실시간 대화 검색</strong>: 상단 🔍 버튼으로 지난 명장면이나 단어로 즉시 화면 점프.</li>
+                <li><strong>15턴 자동 요약</strong>: 긴 서사도 15턴마다 AI가 3줄 압축하여 장기 기억에 누적.</li>
+                <li><strong>대화 3대 조작</strong>: 답변 재시도는 [🔄 리롤], 오타 수정은 [✏️ 수정], 분기 전환은 [↵ 재전송].</li>
+              </ul>
+            </div>
+
+            <!-- 필수 주의사항 및 면책 -->
+            <div class="guide-block alert-block">
+              <h3 class="guide-subtitle">⚠️ 필수 주의사항 & 면책 고지</h3>
+              <ul class="guide-list-bullet">
+                <li><strong>시크릿 모드 주의</strong>: 시크릿 창(InPrivate)으로 접속 시 창을 닫으면 데이터가 즉시 삭제됩니다. 반드시 일반 창에서 이용하세요.</li>
+                <li><strong>주기적 대화 백업 권장</strong>: 캐시 청소 시 대화가 초기화될 수 있으므로 소중한 기록은 [대화 백업 및 내보내기]에서 JSON 파일로 저장해 두세요.</li>
+                <li><strong>API Key 보관</strong>: 본인의 API 키는 개인 메모장에 별도 보관해 두시는 것을 권장합니다.</li>
+                <li><strong>중립 저작 도구 EULA</strong>: 본 소프트웨어는 순수 중립 롤플레이 뷰어/저작 도구이며 성인물이나 특정 서사가 번들되어 있지 않습니다. 외부 카드 및 생성물의 법적 책임은 이용자에게 있습니다.</li>
+              </ul>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+
+    </aside>
+
+    <!-- [우측 메인 영역: 상단(얼굴/속마음) + 대화창 + 입력창] -->
+    <main class="right-panel">
+      
+      <!-- 상단 헤더: [얼굴] + [속마음] + [NAI 삽화 생성 버튼] + [리셋] -->
+      <header class="chat-header">
+        <div class="header-face-card" id="headerFaceCard">
+          <div class="face-avatar-box">
+            <img id="headerAvatar" src="" alt="캐릭터 얼굴" class="header-avatar-img">
+          </div>
+          <span class="header-face-name" id="headerCharName">Synapse Engine</span>
+        </div>
+
+        <div class="header-thought-container" id="headerThoughtContainer">
+          <div class="thought-box" id="thoughtBox" style="display: none;">
+            <span class="thought-badge">속마음</span>
+            <span class="thought-text" id="thoughtText"></span>
+          </div>
+        </div>
+
+        <!-- 모바일 대화 검색 버튼 -->
+        <button type="button" class="btn-mini btn-search-toggle" id="btnToggleSearch" title="대화 내용 검색">🔍</button>
+        <button type="button" class="btn-mini btn-primary" id="btnTriggerNaiArt" title="현재 장면의 NAI 일러스트 삽화 생성" style="display: none;">🎨 삽화</button>
+        <button type="button" class="btn-mini btn-danger" id="btnResetChat" title="대화 초기화">리셋</button>
+
+        <!-- 상단 헤더 언어 빠른 전환 국기/텍스트 캡슐군 (영/일/중/한) -->
+        <div class="header-lang-flags" id="headerLangFlags">
+          <button type="button" class="btn-flag-mini" data-lang="en" title="English">🇺🇸 EN</button>
+          <button type="button" class="btn-flag-mini" data-lang="ja" title="日本語">🇯🇵 JP</button>
+          <button type="button" class="btn-flag-mini" data-lang="zh" title="中文">🇨🇳 CN</button>
+          <button type="button" class="btn-flag-mini active" data-lang="ko" title="한국어">🇰🇷 KR</button>
+        </div>
+      </header>
+
+      <!-- 모바일 대화 실시간 검색 바 (스마트 검색기) -->
+      <div class="chat-search-bar" id="chatSearchBar" style="display: none;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="inputChatSearch" class="search-input" placeholder="대화 내용 검색... (단어 입력 시 실시간 점프)">
+        <span class="search-count" id="searchCountDisplay">0 / 0</span>
+        <button type="button" class="btn-search-nav" id="btnSearchPrev" title="이전 결과 (위로)">▲</button>
+        <button type="button" class="btn-search-nav" id="btnSearchNext" title="다음 결과 (아래로)">▼</button>
+        <button type="button" class="btn-search-close" id="btnCloseSearch" title="검색 닫기">✕</button>
+      </div>
+
+      <!-- 중앙 대화창 로그 -->
+      <div class="chat-viewport" id="chatLog"></div>
+
+      <!-- 하단 RP 텍스트 입력창 -->
+      <footer class="chat-footer">
+        <!-- 모바일 퀵 심볼 바 (특수문자 원터치 칩) -->
+        <div class="chat-quick-toolbar" id="chatQuickToolbar">
+          <button type="button" class="btn-quick-symbol" data-wrap="quote" title="대사 큰따옴표 &quot;...&quot; 삽입">" 대사 "</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="action" title="행동/지문 별표 *...* 삽입">* 지문 *</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="thought" title="속마음 괄호 (...) 삽입">( 속마음 )</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="wave" title="물결표 ~ 삽입">~</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="clear" title="입력창 전체 지우기">⌫ 지우기</button>
+        </div>
+
+        <div class="input-container">
+          <textarea id="userInput" class="rp-input" placeholder="지문(*...*)과 대사(&quot;...&quot;)를 자유롭게 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)" rows="2"></textarea>
+          <button type="button" class="btn-send" id="btnSend">전송</button>
+        </div>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <!-- 스크립트 연결 -->
+  <script>
+/**
+ * [rp_engine.src.js] TouchRP Lite — Pure RP Core Engine
+ * - Multi-Persona Slots
+ * - Long-Term Memory Notes & Background Rolling Auto-Summary
+ * - Dynamic Lorebook (Character Book) Engine
+ * - Multi-Provider (Gemini / OpenRouter / Claude / OpenAI Compatible) & Dynamic Model Fetching
+ * - Message Controls: Reroll / Edit / Delete / Branch
+ * - Pure Client IndexedDB Unlimited Storage + LocalStorage Fallback & Auto-Migration
+ * - NovelAI V5 Integration
+ */
+
+(function(root) {
+  'use strict';
+
+  const BUILTIN_CHARACTERS = {};
+
+  // ============================================================================
+  // 1. IndexedDB 무제한 스토리지 헬퍼 (TouchRPDB)
+  // ============================================================================
+  class TouchRPDB {
+    constructor(dbName = 'TouchRP_DB_v1') {
+      this.dbName = dbName;
+      this.db = null;
+      this.ready = this.init();
+    }
+
+    async init() {
+      if (typeof window === 'undefined' || !window.indexedDB) {
+        return null;
+      }
+      return new Promise((resolve, reject) => {
+        const req = window.indexedDB.open(this.dbName, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('keyval')) {
+            db.createObjectStore('keyval');
+          }
+        };
+        req.onsuccess = (e) => {
+          this.db = e.target.result;
+          this.migrateFromLocalStorage();
+          resolve(this.db);
+        };
+        req.onerror = () => {
+          console.warn('IndexedDB 열기 실패, localStorage 모드로 동작합니다.');
+          resolve(null);
+        };
+      });
+    }
+
+    async migrateFromLocalStorage() {
+      if (typeof localStorage === 'undefined') return;
+      try {
+        const migrated = localStorage.getItem('touchrp_idb_migrated');
+        if (migrated === 'true') return;
+        
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('touchrp_')) {
+            const v = localStorage.getItem(k);
+            await this.set(k, v);
+          }
+        }
+        localStorage.setItem('touchrp_idb_migrated', 'true');
+      } catch (e) {
+        console.warn('LocalStorage -> IndexedDB 자동 마이그레이션 실패:', e);
+      }
+    }
+
+    async get(key) {
+      await this.ready;
+      if (!this.db) {
+        return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+      }
+      return new Promise((resolve) => {
+        try {
+          const tx = this.db.transaction('keyval', 'readonly');
+          const store = tx.objectStore('keyval');
+          const req = store.get(key);
+          req.onsuccess = () => {
+            const val = req.result;
+            if (val === undefined && typeof localStorage !== 'undefined') {
+              resolve(localStorage.getItem(key));
+            } else {
+              resolve(val);
+            }
+          };
+          req.onerror = () => {
+            resolve(typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null);
+          };
+        } catch (e) {
+          resolve(typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null);
+        }
+      });
+    }
+
+    async set(key, value) {
+      await this.ready;
+      // LocalStorage에도 백업 저장 시도
+      if (typeof localStorage !== 'undefined') {
+        try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); } catch (e) {}
+      }
+      if (!this.db) return;
+      return new Promise((resolve) => {
+        try {
+          const tx = this.db.transaction('keyval', 'readwrite');
+          const store = tx.objectStore('keyval');
+          store.put(value, key);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    }
+
+    async remove(key) {
+      await this.ready;
+      if (typeof localStorage !== 'undefined') {
+        try { localStorage.removeItem(key); } catch (e) {}
+      }
+      if (!this.db) return;
+      return new Promise((resolve) => {
+        try {
+          const tx = this.db.transaction('keyval', 'readwrite');
+          const store = tx.objectStore('keyval');
+          store.delete(key);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    }
+  }
+
+  // ============================================================================
+  // 2. TouchRPEngine 메인 클래스
+  // ============================================================================
+  class TouchRPEngine {
+    constructor() {
+      this.db = new TouchRPDB();
+      this.characters = new Map();
+      this.activeCharId = '';
+      this.chatHistory = [];
+      this.userPersonas = [
+        { id: 'default', name: '당신', personaDesc: '기본 페르소나' }
+      ];
+      this.activeUserPersonaId = 'default';
+      this.userName = '당신';
+      this.userPersona = '';
+      this.memoryNotes = [];
+      this.apiProvider = 'gemini'; // 'gemini' | 'openrouter' | 'claude' | 'custom'
+      this.apiKey = '';
+      this.modelName = 'gemini-3.1-flash-lite';
+      this.customBaseUrl = 'https://api.openai.com/v1';
+
+      // 프로바이더별 독립 API 키 및 선택 모델 보관함
+      this.providerKeys = {
+        gemini: '',
+        openrouter: '',
+        claude: '',
+        custom: ''
+      };
+      this.providerModels = {
+        gemini: 'gemini-3.1-flash-lite',
+        openrouter: 'anthropic/claude-3.5-sonnet',
+        claude: 'claude-3-5-sonnet-20241022',
+        custom: 'default'
+      };
+
+      // NovelAI Settings
+      this.naiEnabled = false;
+      this.naiApiKey = '';
+      this.naiModel = 'nai-diffusion-5-full';
+      this.naiPositivePrompt = 'masterpiece, best quality, aesthetic, highly detailed, beautiful lighting, cinematic composition';
+      this.naiNegativePrompt = 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry';
+      this.naiTriggerMode = 'manual';
+      this.naiTurnInterval = 5;
+      this.turnCounter = 0;
+
+      // 자동 요약 (Rolling Auto-Summary)
+      this.autoSummaryEnabled = true;
+      this.autoSummaryInterval = 15; // 15턴마다 자동 요약
+      this.lastSummaryTurn = 0;
+
+      this.maxContextTurns = 20; // 최근 20턴 슬라이딩 윈도우
+      this.lengthPreset = 'standard';
+      this.narrativeStyle = 'balanced';
+      this.temperature = 0.85;
+      this.maxTokens = 2048;
+      this.customPrompt = '';
+      this.outputLanguage = 'ko';
+      this.fontSizePreset = 'medium';
+      this.lineHeightPreset = 'normal';
+
+      this.initBuiltinCharacters();
+      this.loadSettings();
+    }
+
+    initBuiltinCharacters() {
+      for (const [id, char] of Object.entries(BUILTIN_CHARACTERS)) {
+        let c = { ...char };
+        this.characters.set(id, c);
+      }
+      if (!this.activeCharId && this.characters.size > 0) {
+        this.activeCharId = this.characters.keys().next().value;
+      }
+    }
+
+    getActiveUserPersona() {
+      return this.userPersonas.find(p => p.id === this.activeUserPersonaId) || this.userPersonas[0];
+    }
+
+    addUserPersona(name, personaDesc) {
+      const id = 'user_p_' + Date.now();
+      const p = {
+        id,
+        name: name || '새 페르소나',
+        personaDesc: personaDesc || ''
+      };
+      this.userPersonas.push(p);
+      this.activeUserPersonaId = id;
+      this.syncActivePersona();
+      this.saveSettings();
+      return p;
+    }
+
+    deleteUserPersona(id) {
+      if (this.userPersonas.length <= 1) return false;
+      this.userPersonas = this.userPersonas.filter(p => p.id !== id);
+      if (this.activeUserPersonaId === id) {
+        this.activeUserPersonaId = this.userPersonas[0].id;
+      }
+      this.syncActivePersona();
+      this.saveSettings();
+      return true;
+    }
+
+    selectUserPersona(id) {
+      const p = this.userPersonas.find(item => item.id === id);
+      if (p) {
+        this.activeUserPersonaId = id;
+        this.syncActivePersona();
+        this.saveSettings();
+        return p;
+      }
+      return null;
+    }
+
+    syncActivePersona() {
+      const p = this.getActiveUserPersona();
+      if (p) {
+        this.userName = p.name || '당신';
+        this.userPersona = p.personaDesc || '';
+      }
+    }
+
+    addMemoryNote(text) {
+      if (!text || !text.trim()) return false;
+      const note = {
+        id: 'mem_' + Date.now(),
+        text: text.trim(),
+        createdAt: new Date().toISOString()
+      };
+      this.memoryNotes.push(note);
+      this.saveSettings();
+      return note;
+    }
+
+    deleteMemoryNote(id) {
+      this.memoryNotes = this.memoryNotes.filter(n => n.id !== id);
+      this.saveSettings();
+    }
+
+    clearAllMemoryNotes() {
+      this.memoryNotes = [];
+      this.saveSettings();
+    }
+
+    // ============================================================================
+    // 3. AI 대화 요약 (수동 및 백그라운드 롤링 자동 요약)
+    // ============================================================================
+    async summarizeHistory(isAuto = false) {
+      if (this.chatHistory.length < 4) {
+        if (!isAuto) throw new Error('요약할 대화 기록이 충분하지 않습니다 (최소 4턴 이상 권장).');
+        return '';
+      }
+      if (!this.apiKey) {
+        if (!isAuto) throw new Error('API 키를 먼저 입력해 주세요.');
+        return '';
+      }
+
+      // 대화 기록을 텍스트로 압축
+      let fullConversation = '';
+      const sliceTurns = isAuto ? this.chatHistory.slice(-20) : this.chatHistory;
+      sliceTurns.forEach(m => {
+        const sender = m.role === 'assistant' ? this.getActiveCharacter().name : this.userName;
+        fullConversation += `${sender}: ${m.content}\n\n`;
+      });
+
+      const summaryPrompt = `[SYSTEM TASK: CONVERSATION SUMMARY]
+아래는 '${this.userName}'와 캐릭터 '${this.getActiveCharacter().name}'가 나눈 롤플레이 대화 기록입니다.
+
+=== 대화 기록 ===
+${fullConversation}
+=================
+
+[지침]
+지금까지의 핵심 사건, 인물 간의 관계 변화, 중요한 약속, 감정선 등을 3~5줄 내외의 압축된 요약본으로 작성하세요. 반드시 한국어로 작성하세요.`;
+
+      let summaryText = '';
+      try {
+        summaryText = await this.callActiveProvider(summaryPrompt, null, true);
+      } catch (e) {
+        console.warn('요약 생성 실패:', e);
+        if (!isAuto) throw e;
+        return '';
+      }
+
+      if (summaryText && summaryText.trim()) {
+        const prefix = isAuto ? `[자동 롤링 요약 (최근 대화)]: ` : `[대화 요약]: `;
+        this.addMemoryNote(`${prefix}${summaryText.trim()}`);
+        this.lastSummaryTurn = this.chatHistory.length;
+      }
+      return summaryText.trim();
+    }
+
+    async checkAndTriggerAutoSummary() {
+      if (!this.autoSummaryEnabled || !this.apiKey) return;
+      const currentTurns = this.chatHistory.length;
+      if (currentTurns - this.lastSummaryTurn >= (this.autoSummaryInterval || 15)) {
+        try {
+          await this.summarizeHistory(true);
+        } catch (e) {
+          console.warn('Background auto summary failed:', e);
+        }
+      }
+    }
+
+    getMemoryNotesPrompt() {
+      if (!this.memoryNotes || this.memoryNotes.length === 0) return '';
+      const list = this.memoryNotes.map((n, i) => `${i + 1}. ${n.text}`).join('\n');
+      return `[세션 간 장기 누적 기억 (Long-Term Memory Notes)]\n당신은 유저와 과거에 아래의 중요한 사건, 약속, 비밀, 사실들을 공유하고 있습니다:\n${list}\n위 기억들을 잊지 말고 인지하여 자연스러운 대화와 감정선에 지속적으로 반영하세요.\n`;
+    }
+
+    getTriggeredLorebookEntries() {
+      const char = this.getActiveCharacter();
+      if (!char || !char.characterBook || !Array.isArray(char.characterBook.entries)) {
+        return '';
+      }
+
+      let recentContext = '';
+      const recentTurns = this.chatHistory.slice(-5);
+      for (const t of recentTurns) {
+        recentContext += ' ' + (t.content || '');
+      }
+
+      const activeEntries = [];
+      for (const entry of char.characterBook.entries) {
+        if (!entry || !entry.content) continue;
+        const keys = entry.keys || entry.key || [];
+        const isAlwaysActive = entry.constant === true || (entry.enabled === true && keys.length === 0);
+
+        let matched = isAlwaysActive;
+        if (!matched && Array.isArray(keys)) {
+          for (const k of keys) {
+            if (k && recentContext.toLowerCase().includes(k.toLowerCase())) {
+              matched = true;
+              break;
+            }
+          }
+        }
+
+        if (matched) {
+          activeEntries.push(entry.content.trim());
+        }
+      }
+
+      if (activeEntries.length > 0) {
+        return '[활성화된 세계관 / 로어북 지식 (Lorebook Data)]\n' + activeEntries.join('\n\n') + '\n';
+      }
+      return '';
+    }
+
+    getNarrativeStyleInstruction() {
+      let lengthGuide = '';
+      if (this.lengthPreset === 'short') {
+        lengthGuide = '[서술 분량: 단문 (1~2문단)]\n- 군더더기 없이 핵심 상황과 대사 위주로 1~2문단의 짧고 빠른 호흡으로 서술하세요.';
+      } else if (this.lengthPreset === 'long') {
+        lengthGuide = '[서술 분량: 장문 (5~8문단)]\n- 상황의 분위기, 인물의 감정선과 서사를 풍부하게 살려 5~8문단 분량으로 깊이 있게 서술하세요.';
+      } else if (this.lengthPreset === 'epic') {
+        lengthGuide = '[서술 분량: 초장문 (10문단 이상 / 웹소설 한 화 분량)]\n- 기승전결의 서사적 호흡과 복합적인 인물 심리를 압도적인 10문단 이상의 소설체로 웅장하게 서술하세요.';
+      } else {
+        lengthGuide = '[서술 분량: 중문/표준 (3~4문단)]\n- 적절한 분량의 상황 전개와 대사를 균형 있게 3~4문단으로 서술하세요.';
+      }
+
+      let ratioGuide = '';
+      if (this.narrativeStyle === 'novel') {
+        ratioGuide = '[지문/대사 비중: 지문 70% : 대사 30%]\n- 인물의 내면 심리와 서사적 상황 전개를 중심으로 깊이 있게 묘사하세요.';
+      } else if (this.narrativeStyle === 'talk') {
+        ratioGuide = '[지문/대사 비중: 지문 30% : 대사 70%]\n- 인물 간의 자연스러운 대화와 티키타카를 중심으로 서술하세요.';
+      } else {
+        ratioGuide = '[지문/대사 비중: 지문 50% : 대사 50%]\n- 상황 지문과 대사를 균형 있게 조화시켜 서술하세요.';
+      }
+
+      return lengthGuide + '\n' + ratioGuide;
+    }
+
+    saveActiveCharacterPersona(personaDesc, scenarioDesc) {
+      const char = this.getActiveCharacter();
+      if (char) {
+        char.personaDesc = personaDesc;
+        char.scenarioDesc = scenarioDesc;
+        this.db.set('touchrp_char_persona_' + char.id, JSON.stringify({
+          personaDesc: personaDesc,
+          scenarioDesc: scenarioDesc
+        }));
+      }
+    }
+
+    async loadSettings() {
+      await this.db.ready;
+      try {
+        // Custom Characters
+        const customCharsJson = await this.db.get('touchrp_custom_characters');
+        if (customCharsJson) {
+          try {
+            const list = typeof customCharsJson === 'string' ? JSON.parse(customCharsJson) : customCharsJson;
+            if (Array.isArray(list)) {
+              for (const c of list) {
+                if (c && c.id) this.characters.set(c.id, c);
+              }
+            }
+          } catch (e) {}
+        }
+
+        const key = await this.db.get('touchrp_api_key');
+        if (key) this.apiKey = key;
+        const provider = await this.db.get('touchrp_provider');
+        if (provider) this.apiProvider = provider;
+        const model = await this.db.get('touchrp_model');
+        if (model) this.modelName = model;
+        const customUrl = await this.db.get('touchrp_custom_base_url');
+        if (customUrl) this.customBaseUrl = customUrl;
+
+        // 프로바이더별 키 및 모델 로드
+        const savedKeys = await this.db.get('touchrp_provider_keys');
+        if (savedKeys) {
+          try {
+            this.providerKeys = typeof savedKeys === 'string' ? JSON.parse(savedKeys) : savedKeys;
+          } catch (e) {}
+        }
+        if (this.apiKey && !this.providerKeys[this.apiProvider]) {
+          this.providerKeys[this.apiProvider] = this.apiKey;
+        }
+
+        const savedModels = await this.db.get('touchrp_provider_models');
+        if (savedModels) {
+          try {
+            this.providerModels = typeof savedModels === 'string' ? JSON.parse(savedModels) : savedModels;
+          } catch (e) {}
+        }
+        if (this.modelName && !this.providerModels[this.apiProvider]) {
+          this.providerModels[this.apiProvider] = this.modelName;
+        }
+
+        const savedUserPersonas = await this.db.get('touchrp_user_personas_list');
+        if (savedUserPersonas) {
+          try {
+            this.userPersonas = typeof savedUserPersonas === 'string' ? JSON.parse(savedUserPersonas) : savedUserPersonas;
+          } catch (e) {}
+        }
+        const savedActivePersonaId = await this.db.get('touchrp_active_user_persona_id');
+        if (savedActivePersonaId) {
+          this.activeUserPersonaId = savedActivePersonaId;
+        }
+        this.syncActivePersona();
+
+        const savedActiveChar = await this.db.get('touchrp_active_char');
+        if (savedActiveChar && this.characters.has(savedActiveChar)) {
+          this.activeCharId = savedActiveChar;
+        } else if (!this.activeCharId && this.characters.size > 0) {
+          this.activeCharId = this.characters.keys().next().value;
+        }
+
+        // 활성 캐릭터의 대화, 메모리, 커스텀 프롬프트 로드
+        if (this.activeCharId) {
+          await this.loadCharacterData(this.activeCharId);
+        }
+
+        const savedLang = await this.db.get('touchrp_output_lang');
+        if (savedLang) this.outputLanguage = savedLang;
+
+        const savedLen = await this.db.get('touchrp_length_preset');
+        if (savedLen) this.lengthPreset = savedLen;
+
+        const savedNarrative = await this.db.get('touchrp_narrative_style');
+        if (savedNarrative) this.narrativeStyle = savedNarrative;
+
+        const savedFont = await this.db.get('touchrp_font_size');
+        if (savedFont) this.fontSizePreset = savedFont;
+
+        const savedLine = await this.db.get('touchrp_line_height');
+        if (savedLine) this.lineHeightPreset = savedLine;
+
+        // NAI
+        const naiEn = await this.db.get('touchrp_nai_enabled');
+        if (naiEn !== null) this.naiEnabled = (naiEn === 'true' || naiEn === true);
+
+        const naiKey = await this.db.get('touchrp_nai_api_key');
+        if (naiKey) this.naiApiKey = naiKey;
+
+        const naiM = await this.db.get('touchrp_nai_model');
+        if (naiM) this.naiModel = naiM;
+
+        const naiP = await this.db.get('touchrp_nai_pos');
+        if (naiP) this.naiPositivePrompt = naiP;
+
+        const naiN = await this.db.get('touchrp_nai_neg');
+        if (naiN) this.naiNegativePrompt = naiN;
+
+        const naiT = await this.db.get('touchrp_nai_trigger');
+        if (naiT) this.naiTriggerMode = naiT;
+
+        const naiI = await this.db.get('touchrp_nai_interval');
+        if (naiI) this.naiTurnInterval = parseInt(naiI, 10) || 5;
+      } catch (e) {
+        console.warn('Settings load error:', e);
+      }
+    }
+
+    async saveSettings() {
+      try {
+        if (this.apiProvider && this.apiKey) {
+          this.providerKeys[this.apiProvider] = this.apiKey;
+        }
+        if (this.apiProvider && this.modelName) {
+          this.providerModels[this.apiProvider] = this.modelName;
+        }
+
+        await this.db.set('touchrp_api_key', this.apiKey);
+        await this.db.set('touchrp_provider', this.apiProvider);
+        await this.db.set('touchrp_model', this.modelName);
+        await this.db.set('touchrp_custom_base_url', this.customBaseUrl);
+        await this.db.set('touchrp_provider_keys', JSON.stringify(this.providerKeys));
+        await this.db.set('touchrp_provider_models', JSON.stringify(this.providerModels));
+        await this.db.set('touchrp_active_char', this.activeCharId);
+        await this.db.set('touchrp_active_user_persona_id', this.activeUserPersonaId);
+        await this.db.set('touchrp_output_lang', this.outputLanguage);
+        await this.db.set('touchrp_length_preset', this.lengthPreset);
+        await this.db.set('touchrp_narrative_style', this.narrativeStyle);
+        await this.db.set('touchrp_font_size', this.fontSizePreset);
+        await this.db.set('touchrp_line_height', this.lineHeightPreset);
+
+        // NAI
+        await this.db.set('touchrp_nai_enabled', this.naiEnabled.toString());
+        await this.db.set('touchrp_nai_api_key', this.naiApiKey);
+        await this.db.set('touchrp_nai_model', this.naiModel);
+        await this.db.set('touchrp_nai_pos', this.naiPositivePrompt);
+        await this.db.set('touchrp_nai_neg', this.naiNegativePrompt);
+        await this.db.set('touchrp_nai_trigger', this.naiTriggerMode);
+        await this.db.set('touchrp_nai_interval', (this.naiTurnInterval || 5).toString());
+
+        await this.db.set('touchrp_user_personas_list', JSON.stringify(this.userPersonas || []));
+
+        if (this.activeCharId) {
+          await this.db.set('touchrp_memory_notes_' + this.activeCharId, JSON.stringify(this.memoryNotes || []));
+          await this.db.set('touchrp_chat_history_' + this.activeCharId, JSON.stringify(this.chatHistory || []));
+          await this.db.set('touchrp_custom_prompt_' + this.activeCharId, this.customPrompt || '');
+        }
+
+        // Save Custom characters
+        const customList = [];
+        for (const [id, c] of this.characters.entries()) {
+          if (!BUILTIN_CHARACTERS[id]) {
+            customList.push(c);
+          }
+        }
+        await this.db.set('touchrp_custom_characters', JSON.stringify(customList));
+      } catch (e) {
+        console.warn('Settings save error:', e);
+      }
+    }
+
+    getActiveCharacter() {
+      return this.characters.get(this.activeCharId) || this.characters.values().next().value || {
+        id: 'default',
+        name: '캐릭터',
+        avatar: '',
+        personaDesc: '',
+        scenarioDesc: '',
+        firstMes: '"무슨 생각 하고 있어?"'
+      };
+    }
+
+    async selectCharacter(charId) {
+      if (this.characters.has(charId)) {
+        this.activeCharId = charId;
+        await this.loadCharacterData(charId);
+        await this.saveSettings();
+        return this.getActiveCharacter();
+      }
+      return null;
+    }
+
+    async loadCharacterData(charId) {
+      if (!charId) return;
+      const savedNotes = await this.db.get('touchrp_memory_notes_' + charId);
+      if (savedNotes) {
+        try {
+          this.memoryNotes = typeof savedNotes === 'string' ? JSON.parse(savedNotes) : savedNotes;
+        } catch (e) {
+          this.memoryNotes = [];
+        }
+      } else {
+        this.memoryNotes = [];
+      }
+
+      const savedPrompt = await this.db.get('touchrp_custom_prompt_' + charId);
+      this.customPrompt = savedPrompt || '';
+
+      const savedChat = await this.db.get('touchrp_chat_history_' + charId);
+      if (savedChat) {
+        try {
+          this.chatHistory = typeof savedChat === 'string' ? JSON.parse(savedChat) : savedChat;
+        } catch (e) {
+          this.resetChat();
+        }
+      } else {
+        this.resetChat();
+      }
+    }
+
+    resetChat() {
+      const char = this.getActiveCharacter();
+      this.chatHistory = [];
+      if (char && char.firstMes) {
+        const greeting = char.alternateGreetings && char.alternateGreetings.length > 0
+          ? char.alternateGreetings[Math.floor(Math.random() * char.alternateGreetings.length)]
+          : char.firstMes;
+        this.chatHistory.push({
+          role: 'assistant',
+          content: greeting.replace(/\{\{user\}\}/g, this.userName).replace(/\{\{char\}\}/g, char.name),
+          thought: ''
+        });
+      }
+      this.lastSummaryTurn = 0;
+      this.saveSettings();
+    }
+
+    registerCharacter(charData) {
+      const id = charData.id || 'custom_' + Date.now();
+      const character = {
+        id,
+        name: charData.name || '캐릭터',
+        avatar: charData.avatar || '',
+        personaDesc: charData.personaDesc || charData.description || '',
+        scenarioDesc: charData.scenarioDesc || charData.scenario || '',
+        firstMes: charData.firstMes || charData.first_mes || '',
+        alternateGreetings: charData.alternateGreetings || (charData.alternate_greetings ? charData.alternate_greetings : [charData.firstMes || charData.first_mes || '']),
+        systemPrompt: charData.systemPrompt || charData.system_prompt || '',
+        characterBook: charData.characterBook || charData.character_book || null,
+        tags: charData.tags || ['커스텀']
+      };
+      this.characters.set(id, character);
+      this.saveSettings();
+      return character;
+    }
+
+    async importCardFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'json') {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const data = json.data || json;
+        const char = this.registerCharacter({
+          id: 'card_' + Date.now(),
+          name: data.name,
+          avatar: json.avatar || '',
+          personaDesc: data.description || '',
+          scenarioDesc: data.scenario || '',
+          firstMes: data.first_mes || '',
+          alternateGreetings: data.alternate_greetings || [data.first_mes || ''],
+          characterBook: data.character_book || null,
+          tags: data.tags || ['JSON 카드']
+        });
+        return char;
+      } else if (ext === 'png') {
+        const arrayBuf = await file.arrayBuffer();
+        const buf = new Uint8Array(arrayBuf);
+        const charData = this.extractPngCharaMetadata(buf);
+        let avatarUrl = '';
+        try {
+          avatarUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+        } catch (e) {}
+
+        if (charData) {
+          const data = charData.data || charData;
+          const char = this.registerCharacter({
+            id: 'card_' + Date.now(),
+            name: data.name,
+            avatar: avatarUrl,
+            personaDesc: data.description || '',
+            scenarioDesc: data.scenario || '',
+            firstMes: data.first_mes || '',
+            alternateGreetings: data.alternate_greetings || [data.first_mes || ''],
+            characterBook: data.character_book || null,
+            tags: data.tags || ['PNG 카드']
+          });
+          return char;
+        } else {
+          const char = this.registerCharacter({
+            id: 'img_' + Date.now(),
+            name: file.name.replace(/\.[^/.]+$/, ''),
+            avatar: avatarUrl,
+            personaDesc: '사용자 지정 이미지 캐릭터',
+            firstMes: `"${this.userName}, 무슨 생각 하고 있어?"`,
+            tags: ['이미지']
+          });
+          return char;
+        }
+      }
+      throw new Error('지원하지 않는 파일 형식입니다. (.png, .json)');
+    }
+
+    extractPngCharaMetadata(buf) {
+      let offset = 8;
+      const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+      while (offset < buf.length) {
+        const length = view.getUint32(offset);
+        let type = '';
+        for (let i = 0; i < 4; i++) {
+          type += String.fromCharCode(buf[offset + 4 + i]);
+        }
+        if (type === 'tEXt') {
+          const chunkData = buf.subarray(offset + 8, offset + 8 + length);
+          let nullIdx = -1;
+          for (let i = 0; i < chunkData.length; i++) {
+            if (chunkData[i] === 0) { nullIdx = i; break; }
+          }
+          if (nullIdx !== -1) {
+            let key = '';
+            for (let i = 0; i < nullIdx; i++) { key += String.fromCharCode(chunkData[i]); }
+            if (key === 'chara') {
+              let b64 = '';
+              for (let i = nullIdx + 1; i < chunkData.length; i++) {
+                b64 += String.fromCharCode(chunkData[i]);
+              }
+              const jsonStr = decodeURIComponent(escape(atob(b64)));
+              return JSON.parse(jsonStr);
+            }
+          }
+        }
+        offset += 12 + length;
+      }
+      return null;
+    }
+
+    buildSystemPrompt() {
+      const char = this.getActiveCharacter();
+      let prompt = '[SYSTEM GUIDELINE: ROLEPLAY & NOVELISTIC INTERACTION]\n';
+      prompt += `당신은 지금부터 매력적이고 몰입도 높은 인터랙티브 롤플레이 캐릭터 '${char.name}'의 역할을 전담하여 연기합니다.\n\n`;
+      prompt += `[캐릭터 프로필 & 원본 설정]\n- 이름: ${char.name}\n`;
+      if (char.personaDesc) prompt += `- 상세 설정:\n${char.personaDesc}\n`;
+      if (char.scenarioDesc) prompt += `- 현재 상황/배경 시나리오:\n${char.scenarioDesc}\n`;
+      prompt += this.getTriggeredLorebookEntries();
+      const memPrompt = this.getMemoryNotesPrompt();
+      if (memPrompt) prompt += '\n' + memPrompt;
+      prompt += `\n[상대방(유저) 정보 및 페르소나]\n- 이름/호칭: ${this.userName}\n`;
+      if (this.userPersona) prompt += `- 유저 페르소나 (외형/성격/배경/관계):\n${this.userPersona}\n`;
+      prompt += '\n[응답 포맷 및 서술 규칙]\n';
+      if (this.outputLanguage === 'en') {
+        prompt += '[LANGUAGE REQUIREMENT: ENGLISH]\n- Write all narrative prose, descriptions, inner thoughts, and dialogue in fluent, expressive English.\n';
+      } else if (this.outputLanguage === 'ja') {
+        prompt += '[LANGUAGE REQUIREMENT: JAPANESE]\n- 全ての地の文、心理描写、思考、セリフを自然で情緒豊かな日本語で執筆してください。\n';
+      } else if (this.outputLanguage === 'zh') {
+        prompt += '[LANGUAGE REQUIREMENT: CHINESE]\n- 所有旁白描述、心理活动、思考以及对话请使用流畅、生动的中文（简体/繁体）进行叙述。\n';
+      } else {
+        prompt += '[LANGUAGE REQUIREMENT: KOREAN]\n- 모든 지문 서술, 심리 묘사, 속마음, 대사를 유려하고 자연스러운 한국어로 서술하세요.\n';
+      }
+      prompt += this.getNarrativeStyleInstruction() + '\n';
+      if (this.customPrompt) prompt += `[추가 사용자 지정 지침]\n${this.customPrompt}\n`;
+      prompt += '1. 지문(*...* 또는 줄글 문장)과 대사(\"...\")를 명확히 구분하여 서술하세요.\n';
+      prompt += '2. 속마음 분리: 캐릭터의 은밀한 속마음은 답변 맨 첫 줄에 <thought>속마음</thought> 태그 형태로 작성하세요.\n';
+      if (this.naiEnabled && this.naiApiKey) {
+        if (this.naiTriggerMode === 'auto_climax') {
+          prompt += '3. [삽화 자동 생성]: 현재 대화가 감정의 고조, 스킨십, 극적인 사건, 시각적 클라이맥스 장면이라고 판단될 경우, 답변 맨 마지막 줄에 반드시 [IMAGE_PROMPT: 1girl/1boy, character description, action, background, cinematic lighting] 태그를 붙여주세요.\n';
+        } else if (this.naiTriggerMode === 'turn_interval') {
+          prompt += '3. [삽화 프롬프트 추출]: 답변 맨 마지막 줄에 현재 장면의 분위기와 인물 구도를 묘사한 [IMAGE_PROMPT: 1girl/1boy, character description, action, background, aesthetic] 태그를 항상 붙여주세요.\n';
+        }
+      }
+      prompt += `4. 유저의 행동이나 대사를 대신 결정하지 말고, 오직 '${char.name}'의 시점에서만 연기하세요.`;
+      return prompt;
+    }
+
+    parseThoughtAndContent(rawText) {
+      let thought = '';
+      let content = rawText;
+      let imagePrompt = '';
+
+      const thoughtMatch = rawText.match(/<thought>([\s\S]*?)<\/thought>/i);
+      if (thoughtMatch) {
+        thought = thoughtMatch[1].trim();
+        content = content.replace(/<thought>[\s\S]*?<\/thought>/i, '').trim();
+      }
+
+      const imgMatch = content.match(/\[IMAGE_PROMPT:\s*([^\]]+)\]/i);
+      if (imgMatch) {
+        imagePrompt = imgMatch[1].trim();
+        content = content.replace(/\[IMAGE_PROMPT:\s*[^\]]+\]/i, '').trim();
+      }
+
+      return { thought, content, imagePrompt };
+    }
+
+    // ============================================================================
+    // 4. 대화 전송 및 리롤 / 수정 / 삭제 관리
+    // ============================================================================
+    async sendMessage(userText, onChunk = null) {
+      if (!this.apiKey) {
+        throw new Error('API 키가 입력되지 않았습니다. 좌측 탭을 열어 API 설정을 완료해 주세요.');
+      }
+
+      const processedUserText = userText.trim();
+      this.chatHistory.push({
+        role: 'user',
+        content: processedUserText
+      });
+
+      return await this.generateAssistantTurn(onChunk);
+    }
+
+    async generateAssistantTurn(onChunk = null) {
+      const systemPrompt = this.buildSystemPrompt();
+      let rawResponse = await this.callActiveProvider(systemPrompt, onChunk);
+
+      this.turnCounter++;
+      const { thought, content, imagePrompt } = this.parseThoughtAndContent(rawResponse);
+
+      let shouldGenerateNai = false;
+      let finalPromptForNai = imagePrompt;
+
+      if (this.naiEnabled && this.naiApiKey) {
+        if (this.naiTriggerMode === 'auto_climax' && imagePrompt) {
+          shouldGenerateNai = true;
+        } else if (this.naiTriggerMode === 'turn_interval') {
+          if (this.turnCounter % (this.naiTurnInterval || 5) === 0) {
+            shouldGenerateNai = true;
+            if (!finalPromptForNai) {
+              const char = this.getActiveCharacter();
+              finalPromptForNai = (char.name || 'character') + ', solo, upper body, masterpiece, aesthetic, looking at viewer';
+            }
+          }
+        }
+      }
+
+      let generatedImgUrl = '';
+      if (shouldGenerateNai && finalPromptForNai) {
+        try {
+          generatedImgUrl = await this.generateNaiIllustration(finalPromptForNai);
+        } catch (e) {
+          console.warn('Auto NAI illustration failed:', e);
+        }
+      }
+
+      let finalContent = content || rawResponse;
+      if (generatedImgUrl) {
+        finalContent += '\n\n<div class="nai-bubble-img-wrapper"><img src="' + generatedImgUrl + '" class="nai-bubble-img" alt="NAI 삽화"></div>';
+      }
+
+      const assistantMsg = {
+        role: 'assistant',
+        content: finalContent,
+        thought: thought
+      };
+
+      this.chatHistory.push(assistantMsg);
+      this.saveSettings();
+
+      // 백그라운드 자동 요약 조건 검사
+      this.checkAndTriggerAutoSummary();
+
+      return assistantMsg;
+    }
+
+    // 리롤 (마지막 어시스턴트 메시지 다시 생성)
+    async rerollLastMessage(onChunk = null) {
+      if (this.chatHistory.length === 0) return null;
+      const lastMsg = this.chatHistory[this.chatHistory.length - 1];
+      if (lastMsg.role === 'assistant') {
+        this.chatHistory.pop(); // 직전 답변 제거
+      }
+      return await this.generateAssistantTurn(onChunk);
+    }
+
+    // 메시지 내용 수정
+    editMessage(index, newContent, newThought = null) {
+      if (index >= 0 && index < this.chatHistory.length) {
+        this.chatHistory[index].content = newContent;
+        if (newThought !== null) {
+          this.chatHistory[index].thought = newThought;
+        }
+        this.saveSettings();
+        return true;
+      }
+      return false;
+    }
+
+    // 메시지 삭제
+    deleteMessage(index) {
+      if (index >= 0 && index < this.chatHistory.length) {
+        this.chatHistory.splice(index, 1);
+        this.saveSettings();
+        return true;
+      }
+      return false;
+    }
+
+    // 특정 메시지 이후를 모두 자르고 다시 시작
+    truncateFromMessage(index) {
+      if (index >= 0 && index < this.chatHistory.length) {
+        this.chatHistory = this.chatHistory.slice(0, index + 1);
+        this.saveSettings();
+        return true;
+      }
+      return false;
+    }
+
+    // ============================================================================
+    // 5. 전역 통합 API 호출 (Gemini / OpenRouter / Claude / Custom)
+    // ============================================================================
+    async callActiveProvider(systemPrompt, onChunk = null, isDirectText = false) {
+      const provider = this.apiProvider || 'gemini';
+      if (provider === 'gemini') {
+        return await this.callGemini(systemPrompt, onChunk, isDirectText);
+      } else if (provider === 'openrouter') {
+        return await this.callOpenRouter(systemPrompt, onChunk, isDirectText);
+      } else if (provider === 'claude') {
+        return await this.callClaude(systemPrompt, onChunk, isDirectText);
+      } else {
+        return await this.callCustomOpenAI(systemPrompt, onChunk, isDirectText);
+      }
+    }
+
+    // Gemini 동적 모델 목록 조회
+    async fetchGeminiModels(apiKey) {
+      const key = apiKey || this.apiKey;
+      if (!key) return [];
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key.trim()}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error('Gemini 모델 목록 조회 실패: ' + (errJson.error?.message || res.statusText));
+      }
+      const data = await res.json();
+      const models = (data.models || [])
+        .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => {
+          const id = m.name.replace(/^models\//, '');
+          return { id: id, name: m.displayName ? `${m.displayName} (${id})` : id };
+        });
+
+      // 최신 무료/경량 플래시 모델을 최우선 정렬 (3.1-flash-lite, 3.5-flash-lite, 3.8-flash)
+      const priorityOrder = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
+      models.sort((a, b) => {
+        const idxA = priorityOrder.indexOf(a.id);
+        const idxB = priorityOrder.indexOf(b.id);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.id.localeCompare(b.id);
+      });
+
+      return models;
+    }
+
+    // OpenRouter 동적 모델 목록 조회
+    async fetchOpenRouterModels(apiKey) {
+      const key = apiKey || this.apiKey;
+      if (!key) return [];
+      const res = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: {
+          'Authorization': 'Bearer ' + key.trim()
+        }
+      });
+      if (!res.ok) throw new Error('OpenRouter 모델 목록 조회 실패 (' + res.status + ')');
+      const data = await res.json();
+      return (data.data || []).map(m => ({ id: m.id, name: m.name || m.id }));
+    }
+
+    async generateNaiIllustration(promptText) {
+      if (!this.naiEnabled || !this.naiApiKey) return null;
+      const endpoint = 'https://image.novelai.net/ai/generate-image';
+      
+      const qualityTags = this.naiPositivePrompt ? (', ' + this.naiPositivePrompt.trim()) : '';
+      const payload = {
+        input: promptText + qualityTags,
+        model: this.naiModel || 'nai-diffusion-5-full',
+        action: 'generate',
+        parameters: {
+          width: 832,
+          height: 1216,
+          scale: 6,
+          sampler: 'k_euler',
+          steps: 28,
+          n_samples: 1,
+          negative_prompt: this.naiNegativePrompt || 'lowres, bad anatomy, bad hands, text, error, blurry'
+        }
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.naiApiKey.trim()
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error('NovelAI 이미지 생성 실패 (' + res.status + ')');
+      }
+
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    }
+
+    getContextMessagesForApi() {
+      const maxTurns = this.maxContextTurns || 20;
+      if (this.chatHistory.length <= maxTurns) {
+        return this.chatHistory;
+      }
+      return this.chatHistory.slice(-maxTurns);
+    }
+
+    async callGemini(systemPrompt, onChunk, isDirectText = false) {
+      let model = this.modelName || 'gemini-3.1-flash-lite';
+      if (!model.includes('gemini')) model = 'gemini-3.1-flash-lite';
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey.trim()}`;
+
+      let contents = [];
+      if (isDirectText) {
+        contents = [{ role: 'user', parts: [{ text: systemPrompt }] }];
+      } else {
+        const historySlice = this.getContextMessagesForApi();
+        for (const msg of historySlice) {
+          contents.push({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: (msg.thought ? `<thought>${msg.thought}</thought>\n` : '') + msg.content }]
+          });
+        }
+      }
+
+      const payload = {
+        contents: contents,
+        generationConfig: {
+          temperature: this.temperature,
+          maxOutputTokens: this.maxTokens
+        }
+      };
+
+      if (!isDirectText) {
+        payload.system_instruction = {
+          parts: [{ text: systemPrompt }]
+        };
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(`Gemini API 오류 (${res.status}): ${errJson.error?.message || res.statusText}`);
+      }
+
+      const data = await res.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+
+    async callOpenRouter(systemPrompt, onChunk, isDirectText = false) {
+      const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      let messages = [];
+      if (isDirectText) {
+        messages = [{ role: 'user', content: systemPrompt }];
+      } else {
+        messages = [{ role: 'system', content: systemPrompt }];
+        const historySlice = this.getContextMessagesForApi();
+        for (const msg of historySlice) {
+          messages.push({
+            role: msg.role,
+            content: (msg.thought ? `<thought>${msg.thought}</thought>\n` : '') + msg.content
+          });
+        }
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.apiKey.trim(),
+          'HTTP-Referer': 'https://touchrp.local',
+          'X-Title': 'TouchRP Lite'
+        },
+        body: JSON.stringify({
+          model: this.modelName || 'anthropic/claude-3.5-sonnet',
+          messages: messages,
+          temperature: this.temperature,
+          max_tokens: this.maxTokens
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(`OpenRouter 오류 (${res.status}): ${errJson.error?.message || res.statusText}`);
+      }
+
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || '';
+    }
+
+    async callClaude(systemPrompt, onChunk, isDirectText = false) {
+      const endpoint = 'https://api.anthropic.com/v1/messages';
+      let messages = [];
+      if (isDirectText) {
+        messages = [{ role: 'user', content: systemPrompt }];
+      } else {
+        const historySlice = this.getContextMessagesForApi();
+        for (const msg of historySlice) {
+          messages.push({
+            role: msg.role === 'assistant' ? 'assistant' : 'user',
+            content: (msg.thought ? `<thought>${msg.thought}</thought>\n` : '') + msg.content
+          });
+        }
+      }
+
+      const payload = {
+        model: this.modelName || 'claude-3-5-sonnet-20241022',
+        messages: messages,
+        max_tokens: this.maxTokens,
+        temperature: this.temperature
+      };
+
+      if (!isDirectText) {
+        payload.system = systemPrompt;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey.trim(),
+          'anthropic-version': '2023-06-01',
+          'dangerously-allow-browser': 'true'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(`Claude API 오류 (${res.status}): ${errJson.error?.message || res.statusText}`);
+      }
+
+      const data = await res.json();
+      return data.content?.[0]?.text || '';
+    }
+
+    async callCustomOpenAI(systemPrompt, onChunk, isDirectText = false) {
+      let baseUrl = this.customBaseUrl ? this.customBaseUrl.trim().replace(/\/$/, '') : 'https://api.openai.com/v1';
+      if (!baseUrl.endsWith('/chat/completions')) {
+        baseUrl += '/chat/completions';
+      }
+
+      let messages = [];
+      if (isDirectText) {
+        messages = [{ role: 'user', content: systemPrompt }];
+      } else {
+        messages = [{ role: 'system', content: systemPrompt }];
+        const historySlice = this.getContextMessagesForApi();
+        for (const msg of historySlice) {
+          messages.push({
+            role: msg.role,
+            content: (msg.thought ? `<thought>${msg.thought}</thought>\n` : '') + msg.content
+          });
+        }
+      }
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.apiKey) {
+        headers['Authorization'] = 'Bearer ' + this.apiKey.trim();
+      }
+
+      const res = await fetch(baseUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          model: this.modelName || 'default',
+          messages: messages,
+          temperature: this.temperature,
+          max_tokens: this.maxTokens
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(`API 오류 (${res.status}): ${errJson.error?.message || res.statusText}`);
+      }
+
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || '';
+    }
+  }
+
+  root.TouchRPEngine = TouchRPEngine;
+  root.BUILTIN_CHARACTERS = BUILTIN_CHARACTERS;
+
+})(typeof window !== 'undefined' ? window : global);
+
+</script>
+<script>
+  const I18N_DICT = {
+    ko: {
+      charSelectTitle: '캐릭터 선택',
+      btnAddCard: '카드 추가',
+      userPersonaTitle: '내 페르소나 관리',
+      slotLabel: '페르소나 슬롯',
+      btnNewPersona: '+ 새 페르소나',
+      userNameLabel: '내 이름 / 호칭',
+      userPersonaLabel: '내 성격 / 외형 / 관계 설정',
+      btnSavePersona: '현재 페르소나 저장',
+      btnDeletePersona: '페르소나 삭제',
+      btnExportPersonas: '페르소나 파일 저장',
+      btnImportPersonas: '페르소나 파일 불러오기',
+      memoryTitle: '장기 기억 노트 (메모리)',
+      memoryGuideTitle: '저장 안내:',
+      memoryGuideDesc: '장기 기억은 외부 서버가 아닌 이 기기의 브라우저 내부(localStorage)에 안전하게 보관됩니다.',
+      memoryInputPlaceholder: '캐릭터가 영구히 기억할 중요한 사건, 약속, 사실을 입력하세요',
+      btnAddMemory: '기억 추가',
+      memoryListLabel: '보존 중인 핵심 기억 목록:',
+      btnClearAllMemory: '전체 비우기',
+      emptyMemoryHint: '등록된 장기 기억이 없습니다.',
+      charSettingsTitle: '캐릭터 설정',
+      charPersonaLabel: '캐릭터 성격 / 프로필',
+      charScenarioLabel: '상황 / 배경 시나리오',
+      btnSaveCharSettings: '캐릭터 설정 저장',
+      promptTitle: '프롬프트 입력란',
+      customPromptLabel: '추가 시스템 프롬프트 / 특별 지침',
+      btnSavePrompt: '프롬프트 저장',
+      aiModelTitle: 'AI 모델 설정',
+      providerLabel: 'AI 제공자 (Provider)',
+      apiKeyLabel: 'API Key',
+      modelLabel: '사용 모델',
+      btnRefreshModels: '목록 갱신',
+      btnSaveApi: 'AI 모델 설정 저장',
+      naiTitle: 'NovelAI (NAI) 삽화 설정',
+      naiToggleLabel: 'NAI 삽화 생성 기능 켜기',
+      naiTriggerLabel: '삽화 생성 발동 방식',
+      naiIntervalLabel: '삽화 생성 주기 설정',
+      naiTurnSuffix: '턴 대화마다 자동 생성',
+      naiModelLabel: 'NAI 확산 모델',
+      naiPositiveLabel: '기본 긍정 프롬프트 (품질/화풍 태그)',
+      naiNegativeLabel: '네거티브 프롬프트 (제외할 요소)',
+      btnSaveNai: 'NAI 삽화 설정 저장',
+      backupTitle: '대화 백업 및 내보내기',
+      btnExportBackup: '대화 백업(저장)',
+      btnImportBackup: '대화 복원(불러오기)',
+      btnExportTxt: '텍스트(TXT) 추출',
+      btnClearChat: '대화 초기화',
+      narrativeTitle: '문체 설정',
+      langLabel: '출력 및 UI 언어 (Language)',
+      lengthLabel: '서술 분량',
+      ratioLabel: '지문 및 대사 비중',
+      tempLabel: '창의성 (Temperature)',
+      viewerTitle: '대화창 글자 크기 / 뷰어 설정',
+      helpGuideTitle: '📖 가이드 & 주의사항',
+      fontSizeLabel: '글자 크기 (Font Size)',
+      lineHeightLabel: '줄간격 (Line Height)',
+      thoughtBadge: '속마음',
+      btnReset: '리셋',
+      btnSend: '전송',
+      inputPlaceholder: '지문(*...*)과 대사("... ")를 자유롭게 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)',
+      searchPlaceholder: '대화 내용 검색... (단어 입력 시 실시간 점프)',
+      apiKeyGuide: '입력하신 API Key는 외부 서버로 전송되지 않고 이 기기의 브라우저 내부(IndexedDB)에 안전하게 보관됩니다. 브라우저 캐시 삭제 시 초기화될 수 있으니 키를 별도로 잘 보관해 두세요.',
+      symQuote: '" 대사 "',
+      symAction: '* 지문 *',
+      symThought: '( 속마음 )',
+      symClear: '⌫ 지우기',
+      btnReroll: '🔄 리롤',
+      btnEdit: '✏️ 수정',
+      btnDelete: '🗑️ 삭제',
+      btnResend: '↵ 재전송'
+    },
+    en: {
+      charSelectTitle: 'Character Selection',
+      btnAddCard: 'Add Card',
+      userPersonaTitle: 'User Persona Manager',
+      slotLabel: 'Persona Slot',
+      btnNewPersona: '+ New Persona',
+      userNameLabel: 'My Name / Title',
+      userPersonaLabel: 'My Persona / Appearance / Relationship',
+      btnSavePersona: 'Save Current Persona',
+      btnDeletePersona: 'Delete Persona',
+      btnExportPersonas: 'Export Persona File',
+      btnImportPersonas: 'Import Persona File',
+      memoryTitle: 'Long-Term Memory Notes',
+      memoryGuideTitle: 'Storage Info:',
+      memoryGuideDesc: 'Long-term memories are safely stored locally in this device browser (localStorage).',
+      memoryInputPlaceholder: 'Enter key facts, promises, or events the character should remember forever',
+      btnAddMemory: 'Add Memory',
+      memoryListLabel: 'Saved Key Memories:',
+      btnClearAllMemory: 'Clear All',
+      emptyMemoryHint: 'No long-term memories registered.',
+      charSettingsTitle: 'Character Settings',
+      charPersonaLabel: 'Character Profile & Persona',
+      charScenarioLabel: 'Scenario & Context',
+      btnSaveCharSettings: 'Save Character Settings',
+      promptTitle: 'Custom Prompt Guidelines',
+      customPromptLabel: 'Additional System Prompt / Rules',
+      btnSavePrompt: 'Save Prompt',
+      aiModelTitle: 'AI Model Settings',
+      providerLabel: 'AI Provider',
+      apiKeyLabel: 'API Key',
+      modelLabel: 'Model',
+      btnRefreshModels: 'Refresh List',
+      btnSaveApi: 'Save AI Model Settings',
+      naiTitle: 'NovelAI (NAI) Art Settings',
+      naiToggleLabel: 'Enable NAI Art Generation',
+      naiTriggerLabel: 'Generation Trigger Mode',
+      naiIntervalLabel: 'Generation Interval',
+      naiTurnSuffix: 'turns auto generation',
+      naiModelLabel: 'NAI Diffusion Model',
+      naiPositiveLabel: 'Positive Quality Tags',
+      naiNegativeLabel: 'Negative Prompt',
+      btnSaveNai: 'Save NAI Settings',
+      backupTitle: 'Chat Backup & Export',
+      btnExportBackup: 'Backup Chat (JSON)',
+      btnImportBackup: 'Restore Chat (JSON)',
+      btnExportTxt: 'Export Text (TXT)',
+      btnClearChat: 'Clear Chat',
+      narrativeTitle: 'Writing Style',
+      langLabel: 'Output & UI Language',
+      lengthLabel: 'Prose Length',
+      ratioLabel: 'Dialogue / Action Ratio',
+      tempLabel: 'Creativity (Temperature)',
+      viewerTitle: 'Chat Viewer & Font Settings',
+      helpGuideTitle: '📖 Guide & Precautions',
+      fontSizeLabel: 'Font Size',
+      lineHeightLabel: 'Line Height',
+      thoughtBadge: 'Inner Thought',
+      btnReset: 'Reset',
+      btnSend: 'Send',
+      inputPlaceholder: 'Type actions (*...*) and dialogues ("...") freely... (Enter: Send)',
+      searchPlaceholder: 'Search chat history...',
+      apiKeyGuide: 'Your API Key is stored safely inside this browser (IndexedDB) and never sent to external servers. Clearing browser cache may reset it, so please keep a backup copy.',
+      symQuote: '" Dialogue "',
+      symAction: '* Action *',
+      symThought: '( Thought )',
+      symClear: '⌫ Clear',
+      btnReroll: '🔄 Reroll',
+      btnEdit: '✏️ Edit',
+      btnDelete: '🗑️ Delete',
+      btnResend: '↵ Resend'
+    },
+    ja: {
+      charSelectTitle: 'キャラクター選択',
+      btnAddCard: 'カード追加',
+      userPersonaTitle: 'ペルソナ管理',
+      slotLabel: 'ペルソナスロット',
+      btnNewPersona: '+ 新規ペルソナ',
+      userNameLabel: '名前 / 呼称',
+      userPersonaLabel: '性格 / 外見 / 関係性設定',
+      btnSavePersona: 'ペルソナ保存',
+      btnDeletePersona: 'ペルソナ削除',
+      btnExportPersonas: 'ペルソナ保存 (JSON)',
+      btnImportPersonas: 'ペルソナ読込 (JSON)',
+      memoryTitle: '長期記憶ノート (メモリー)',
+      memoryGuideTitle: '保存について:',
+      memoryGuideDesc: '長期記憶は外部サーバーではなく、この端末のブラウザ内(localStorage)に安全に保管されます。',
+      memoryInputPlaceholder: 'キャラクターが永遠に記憶すべき出来事、約束、設定を入力してください',
+      btnAddMemory: '記憶を追加',
+      memoryListLabel: '保存された重要記憶一覧:',
+      btnClearAllMemory: '全消去',
+      emptyMemoryHint: '登録された長期記憶はありません。',
+      charSettingsTitle: 'キャラクター設定',
+      charPersonaLabel: 'プロフィール・性格',
+      charScenarioLabel: '状況・背景シナリオ',
+      btnSaveCharSettings: 'キャラクター設定保存',
+      promptTitle: 'カスタムプロンプト',
+      customPromptLabel: '追加システム指示・ルール',
+      btnSavePrompt: 'プロンプト保存',
+      aiModelTitle: 'AIモデル設定',
+      providerLabel: 'AIプロバイダー',
+      apiKeyLabel: 'APIキー',
+      modelLabel: '使用モデル',
+      btnRefreshModels: '一覧更新',
+      btnSaveApi: 'AIモデル設定保存',
+      naiTitle: 'NovelAI (NAI) 挿絵設定',
+      naiToggleLabel: 'NAI画像生成を有効化',
+      naiTriggerLabel: '挿絵生成トリガー方式',
+      naiIntervalLabel: '生成周期設定',
+      naiTurnSuffix: 'ターンごとに自動生成',
+      naiModelLabel: 'NAI拡散モデル',
+      naiPositiveLabel: '基本ポジティブプロンプト',
+      naiNegativeLabel: 'ネガティブプロンプト',
+      btnSaveNai: 'NAI設定保存',
+      backupTitle: '会話バックアップ・出力',
+      btnExportBackup: '会話バックアップ(JSON)',
+      btnImportBackup: '会話復元(読込)',
+      btnExportTxt: 'テキスト(TXT)抽出',
+      btnClearChat: '会話初期化',
+      narrativeTitle: '文体設定',
+      langLabel: '出力およびUI言語',
+      lengthLabel: '叙述分量',
+      ratioLabel: '地の文 / セリフ比率',
+      tempLabel: '創造性 (Temperature)',
+      viewerTitle: 'ビューア・文字サイズ設定',
+      helpGuideTitle: '📖 ガイド＆注意事項',
+      fontSizeLabel: '文字サイズ',
+      lineHeightLabel: '行間',
+      thoughtBadge: '思考・本音',
+      btnReset: 'リセット',
+      btnSend: '送信',
+      inputPlaceholder: '地の文(*...*)やセリフ("... ")を入力... (Enterで送信)',
+      searchPlaceholder: '会話履歴を検索...',
+      apiKeyGuide: '入力されたAPIキーは外部サーバーに送信されず、この端末のブラウザ内(IndexedDB)に安全に保管されます。ブラウザのキャッシュ消去で初期化される可能性があるため、キーは安全に保管してください。',
+      symQuote: '" セリフ "',
+      symAction: '* 地の文 *',
+      symThought: '( 思考 )',
+      symClear: '⌫ クリア',
+      btnReroll: '🔄 リロール',
+      btnEdit: '✏️ 編集',
+      btnDelete: '🗑️ 削除',
+      btnResend: '↵ 再送信'
+    },
+    zh: {
+      charSelectTitle: '选择角色',
+      btnAddCard: '添加卡片',
+      userPersonaTitle: '用户人设管理',
+      slotLabel: '人设槽位',
+      btnNewPersona: '+ 新建人设',
+      userNameLabel: '我的名字 / 称呼',
+      userPersonaLabel: '我的性格 / 外貌 / 关系设定',
+      btnSavePersona: '保存当前人设',
+      btnDeletePersona: '删除人设',
+      btnExportPersonas: '导出人设文件',
+      btnImportPersonas: '导入人设文件',
+      memoryTitle: '长期记忆便签 (Memory)',
+      memoryGuideTitle: '存储说明:',
+      memoryGuideDesc: '长期记忆安全保存在本机浏览器内部(localStorage)，未上传外部服务器。',
+      memoryInputPlaceholder: '输入角色需要永久记住的事件、约定或背景设定',
+      btnAddMemory: '添加记忆',
+      memoryListLabel: '保存的关键记忆列表:',
+      btnClearAllMemory: '全部清空',
+      emptyMemoryHint: '暂无长期记忆。',
+      charSettingsTitle: '角色设定',
+      charPersonaLabel: '角色性格与资料',
+      charScenarioLabel: '背景情境与设定',
+      btnSaveCharSettings: '保存角色设定',
+      promptTitle: '自定义提示词',
+      customPromptLabel: '追加系统提示词 / 规则',
+      btnSavePrompt: '保存提示词',
+      aiModelTitle: 'AI模型设置',
+      providerLabel: 'AI提供商',
+      apiKeyLabel: 'API Key',
+      modelLabel: '选择模型',
+      btnRefreshModels: '刷新列表',
+      btnSaveApi: '保存AI模型设置',
+      naiTitle: 'NovelAI (NAI) 插画设置',
+      naiToggleLabel: '开启NAI插画生成功能',
+      naiTriggerLabel: '插画生成触发模式',
+      naiIntervalLabel: '生成周期设置',
+      naiTurnSuffix: '回合自动生成一次',
+      naiModelLabel: 'NAI扩散模型',
+      naiPositiveLabel: '基础正向质量词',
+      naiNegativeLabel: '负向提示词 (过滤词)',
+      btnSaveNai: '保存NAI设置',
+      backupTitle: '对话备份与导出',
+      btnExportBackup: '备份对话 (JSON)',
+      btnImportBackup: '还原对话 (导入)',
+      btnExportTxt: '导出小说文本 (TXT)',
+      btnClearChat: '清空对话',
+      narrativeTitle: '文风设定',
+      langLabel: '输出与界面语言',
+      lengthLabel: '叙述篇幅',
+      ratioLabel: '旁白 / 对话比例',
+      tempLabel: '创造性 (Temperature)',
+      viewerTitle: '阅读器与字号设置',
+      helpGuideTitle: '📖 使用指南与注意事项',
+      fontSizeLabel: '文字大小',
+      lineHeightLabel: '行间距',
+      thoughtBadge: '内心想法',
+      btnReset: '重置',
+      btnSend: '发送',
+      inputPlaceholder: '输入旁白(*...*)与对话("... ")... (Enter发送)',
+      searchPlaceholder: '搜索对话内容...',
+      apiKeyGuide: '输入的API Key仅安全保存在本机浏览器内部(IndexedDB)，不会上传至外部服务器。清理浏览器缓存可能会重置，请妥善备份密钥。',
+      symQuote: '" 对话 "',
+      symAction: '* 旁白 *',
+      symThought: '( 心声 )',
+      symClear: '⌫ 清空',
+      btnReroll: '🔄 重投',
+      btnEdit: '✏️ 编辑',
+      btnDelete: '🗑️ 删除',
+      btnResend: '↵ 重新发送'
+    }
+  };
+
+/**
+ * [ui_controller.src.js] TouchRP Lite UI Controller
+ * - Long-Term Memory Notes Manager (장기 기억 노트 실시간 추가/삭제 및 관리)
+ * - Complete Memory & Chat Backup (JSON 파일 내보내기/불러오기, 소설형 TXT 추출)
+ * - Message Edit & Delete (대사 수정 및 삭제 지원)
+ * - Distinct User Persona vs Character Settings vs Custom Prompt Section
+ * - Gemini Dedicated
+ * - Mobile Side Handle Toggle
+ */
+
+(function(root) {
+  'use strict';
+
+  class TouchRPUIController {
+    constructor() {
+      this.engine = new root.TouchRPEngine();
+      this.editingIndex = -1;
+      this.currentActiveProvider = null;
+      this.searchResults = [];
+      this.currentSearchIndex = -1;
+    }
+
+    async init() {
+      this.initElements();
+      this.bindEvents();
+
+      // IndexedDB로부터 모든 데이터가 100% 로드될 때까지 확실하게 대기!
+      await this.engine.loadSettings();
+
+      this.renderCharacterSelector();
+      this.updateCharacterUI();
+      this.renderMemoryNotesList();
+      this.loadSettingsToUI();
+      
+      if (!this.engine.chatHistory || this.engine.chatHistory.length === 0) {
+        this.engine.resetChat();
+      }
+      this.renderChatLog();
+    }
+
+    initElements() {
+      // Sidebar & Handle
+      this.leftPanel = document.getElementById('leftPanel');
+      this.btnToggleSideHandle = document.getElementById('btnToggleSideHandle');
+      this.drawerOverlay = document.getElementById('drawerOverlay');
+
+      // Header face elements
+      this.headerAvatar = document.getElementById('headerAvatar');
+      this.headerCharName = document.getElementById('headerCharName');
+
+      // Character elements
+      this.charSelect = document.getElementById('charSelect');
+      this.charAvatar = document.getElementById('charAvatar');
+      this.charName = document.getElementById('charName');
+      this.charTags = document.getElementById('charTags');
+      this.btnImportCard = document.getElementById('btnImportCard');
+      this.cardFileInput = document.getElementById('cardFileInput');
+
+      // 1. Long-Term Memory Notes Elements (신규)
+      this.inputNewMemory = document.getElementById('inputNewMemory');
+      this.btnAddMemoryNote = document.getElementById('btnAddMemoryNote');
+      this.memoryNotesList = document.getElementById('memoryNotesList');
+
+      // 2. User Persona Elements
+      this.selectUserPersona = document.getElementById('selectUserPersona');
+      this.btnCreateNewPersona = document.getElementById('btnCreateNewPersona');
+      this.inputUserName = document.getElementById('inputUserName');
+      this.inputUserPersona = document.getElementById('inputUserPersona');
+      this.btnSaveUserPersona = document.getElementById('btnSaveUserPersona');
+      this.btnDeleteUserPersona = document.getElementById('btnDeleteUserPersona');
+      this.btnExportPersonas = document.getElementById('btnExportPersonas');
+      this.btnImportPersonas = document.getElementById('btnImportPersonas');
+      this.personaFileInput = document.getElementById('personaFileInput');
+
+      // 3. Character Settings Elements
+      this.editPersonaDesc = document.getElementById('editPersonaDesc');
+      this.editScenarioDesc = document.getElementById('editScenarioDesc');
+      this.btnSaveCharSettings = document.getElementById('btnSaveCharSettings');
+
+      // 4. Custom Prompt Elements
+      this.editCustomPrompt = document.getElementById('editCustomPrompt');
+      this.btnSavePrompt = document.getElementById('btnSavePrompt');
+
+      // 5. Memory & Backup Elements
+      this.btnExportChatJson = document.getElementById('btnExportChatJson');
+      this.btnImportChatJson = document.getElementById('btnImportChatJson');
+      this.chatBackupFileInput = document.getElementById('chatBackupFileInput');
+      this.btnExportChatTxt = document.getElementById('btnExportChatTxt');
+      this.btnClearCurrentMemory = document.getElementById('btnClearCurrentMemory');
+
+      // 6. Narrative, Language & Viewer Style Elements
+      this.langChips = document.querySelectorAll('#headerLangFlags .btn-flag-mini, #langChipGroup .chip-btn');
+      this.lengthChips = document.querySelectorAll('#lengthChipGroup .chip-btn');
+      this.selectNarrativeStyle = document.getElementById('selectNarrativeStyle');
+      this.inputTemperature = document.getElementById('inputTemperature');
+      this.tempValDisplay = document.getElementById('tempValDisplay');
+      this.fontSizeChips = document.querySelectorAll('#fontSizeChipGroup .chip-btn');
+      this.lineHeightChips = document.querySelectorAll('#lineHeightChipGroup .chip-btn');
+
+      // 7. AI Model & API Settings Elements
+      this.selectProvider = document.getElementById('selectProvider');
+      this.groupCustomBaseUrl = document.getElementById('groupCustomBaseUrl');
+      this.inputCustomBaseUrl = document.getElementById('inputCustomBaseUrl');
+      this.inputApiKey = document.getElementById('inputApiKey');
+      this.groupSelectModel = document.getElementById('groupSelectModel');
+      this.selectModel = document.getElementById('selectModel');
+      this.btnFetchOpenRouterModels = document.getElementById('btnFetchOpenRouterModels');
+      this.groupInputCustomModel = document.getElementById('groupInputCustomModel');
+      this.inputCustomModel = document.getElementById('inputCustomModel');
+      this.btnSaveSettings = document.getElementById('btnSaveSettings');
+
+      // 8. NovelAI Settings Elements
+      this.toggleNaiEnabled = document.getElementById('toggleNaiEnabled');
+      this.inputNaiApiKey = document.getElementById('inputNaiApiKey');
+      this.selectNaiTriggerMode = document.getElementById('selectNaiTriggerMode');
+      this.inputNaiTurnInterval = document.getElementById('inputNaiTurnInterval');
+      this.turnIntervalDisplay = document.getElementById('turnIntervalDisplay');
+      this.selectNaiModel = document.getElementById('selectNaiModel');
+      this.inputNaiPositive = document.getElementById('inputNaiPositive');
+      this.inputNaiNegative = document.getElementById('inputNaiNegative');
+      this.btnSaveNaiSettings = document.getElementById('btnSaveNaiSettings');
+
+      // Right panel elements
+      this.btnTriggerNaiArt = document.getElementById('btnTriggerNaiArt');
+      this.thoughtBox = document.getElementById('thoughtBox');
+      this.thoughtText = document.getElementById('thoughtText');
+      this.chatLog = document.getElementById('chatLog');
+      this.userInput = document.getElementById('userInput');
+      this.btnSend = document.getElementById('btnSend');
+      this.btnResetChat = document.getElementById('btnResetChat');
+
+      // In-App Search & Quick Symbol Bar Elements
+      this.btnToggleSearch = document.getElementById('btnToggleSearch');
+      this.chatSearchBar = document.getElementById('chatSearchBar');
+      this.inputChatSearch = document.getElementById('inputChatSearch');
+      this.btnSearchPrev = document.getElementById('btnSearchPrev');
+      this.btnSearchNext = document.getElementById('btnSearchNext');
+      this.searchCountDisplay = document.getElementById('searchCountDisplay');
+      this.btnCloseSearch = document.getElementById('btnCloseSearch');
+      this.quickSymbolBtns = document.querySelectorAll('.btn-quick-symbol');
+
+      // Accordion headers
+      this.accordionToggles = document.querySelectorAll('.accordion-toggle');
+    }
+
+    bindEvents() {
+      // Sidebar Handle Toggle
+      if (this.btnToggleSideHandle && this.leftPanel) {
+        this.btnToggleSideHandle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleSidebar();
+        });
+      }
+
+      if (this.drawerOverlay) {
+        this.drawerOverlay.addEventListener('click', () => {
+          this.closeSidebar();
+        });
+      }
+
+      // Accordion toggles
+      if (this.accordionToggles) {
+        this.accordionToggles.forEach(toggle => {
+          toggle.addEventListener('click', () => {
+            const section = toggle.closest('.accordion-section');
+            if (section) {
+              section.classList.toggle('collapsed');
+            }
+          });
+        });
+      }
+
+      // Character selection
+      if (this.charSelect) {
+        this.charSelect.addEventListener('change', async (e) => {
+          await this.engine.selectCharacter(e.target.value);
+          this.updateCharacterUI();
+          this.renderMemoryNotesList();
+          this.loadSettingsToUI();
+          this.renderChatLog();
+        });
+      }
+
+      // 1. Long-Term Memory Note Add
+      if (this.btnAddMemoryNote && this.inputNewMemory) {
+        this.btnAddMemoryNote.addEventListener('click', () => {
+          const text = this.inputNewMemory.value.trim();
+          if (!text) {
+            alert('기억할 내용을 입력하세요.');
+            return;
+          }
+          this.engine.addMemoryNote(text);
+          this.inputNewMemory.value = '';
+          this.renderMemoryNotesList();
+          this.showToast('새로운 장기 기억이 등록되었습니다!');
+        });
+      }
+
+      // AI Conversation Auto-Summarize
+      if (this.btnSummarizeChat) {
+        this.btnSummarizeChat.addEventListener('click', async () => {
+          if (!this.engine.apiKey) {
+            alert('API 키를 먼저 설정해 주세요.');
+            return;
+          }
+          this.btnSummarizeChat.disabled = true;
+          this.btnSummarizeChat.textContent = '요약중...';
+          try {
+            const summary = await this.engine.summarizeHistory();
+            this.renderMemoryNotesList();
+            this.showToast('대화가 요약되어 장기 기억에 저장되었습니다!');
+          } catch (err) {
+            alert('대화 요약 실패: ' + err.message);
+          } finally {
+            this.btnSummarizeChat.disabled = false;
+            this.btnSummarizeChat.textContent = '✨ 대화 AI 자동요약';
+          }
+        });
+      }
+
+      // Clear All Long-Term Memory Notes for current character
+      if (this.btnClearAllMemoryNotes) {
+        this.btnClearAllMemoryNotes.addEventListener('click', () => {
+          if (confirm('현재 캐릭터(' + this.engine.getActiveCharacter().name + ')의 모든 장기 기억을 비우시겠습니까?')) {
+            this.engine.memoryNotes = [];
+            this.engine.saveSettings();
+            this.renderMemoryNotesList();
+            this.showToast('모든 장기 기억이 삭제되었습니다.');
+          }
+        });
+      }
+
+      // Memory & Backup Actions
+      if (this.btnExportChatJson) {
+        this.btnExportChatJson.addEventListener('click', () => this.exportChatAsJson());
+      }
+
+      if (this.btnImportChatJson && this.chatBackupFileInput) {
+        this.btnImportChatJson.addEventListener('click', () => {
+          this.chatBackupFileInput.click();
+        });
+        this.chatBackupFileInput.addEventListener('change', (e) => this.importChatFromJson(e));
+      }
+
+      if (this.btnExportChatTxt) {
+        this.btnExportChatTxt.addEventListener('click', () => this.exportChatAsTxt());
+      }
+
+      if (this.btnClearCurrentMemory) {
+        this.btnClearCurrentMemory.addEventListener('click', () => {
+          if (confirm('현재 캐릭터(' + this.engine.getActiveCharacter().name + ')와의 대화 기록을 초기화하시겠습니까?')) {
+            this.engine.resetChat();
+            this.renderChatLog();
+            this.showToast('대화가 초기화되었습니다.');
+          }
+        });
+      }
+
+      // Card import
+      if (this.btnImportCard && this.cardFileInput) {
+        this.btnImportCard.addEventListener('click', () => {
+          this.cardFileInput.click();
+        });
+        this.cardFileInput.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const char = await this.engine.importCardFile(file);
+            this.engine.selectCharacter(char.id);
+            this.renderCharacterSelector();
+            this.updateCharacterUI();
+            this.renderMemoryNotesList();
+            this.renderChatLog();
+            this.showToast('캐릭터 카드가 로드되었습니다: ' + char.name);
+          } catch (err) {
+            alert('카드 불러오기 실패: ' + err.message);
+          }
+          this.cardFileInput.value = '';
+        });
+      }
+
+      // Multi-Persona Selection
+      if (this.selectUserPersona) {
+        this.selectUserPersona.addEventListener('change', (e) => {
+          this.engine.selectUserPersona(e.target.value);
+          this.loadUserPersonaToUI();
+          this.showToast('페르소나가 전환되었습니다: ' + this.engine.userName);
+        });
+      }
+
+      // Create New User Persona
+      if (this.btnCreateNewPersona) {
+        this.btnCreateNewPersona.addEventListener('click', () => {
+          const name = prompt('새 페르소나의 이름/호칭을 입력하세요:', '새 인물');
+          if (name && name.trim()) {
+            this.engine.addUserPersona(name.trim(), '');
+            this.renderUserPersonaSelector();
+            this.loadUserPersonaToUI();
+            this.showToast('새 페르소나 슬롯이 추가되었습니다.');
+          }
+        });
+      }
+
+      // Save User Persona
+      if (this.btnSaveUserPersona) {
+        this.btnSaveUserPersona.addEventListener('click', () => {
+          const p = this.engine.getActiveUserPersona();
+          if (p) {
+            p.name = this.inputUserName ? (this.inputUserName.value.trim() || '당신') : '당신';
+            p.personaDesc = this.inputUserPersona ? this.inputUserPersona.value : '';
+            this.engine.syncActivePersona();
+            this.engine.saveSettings();
+            this.renderUserPersonaSelector();
+            this.showToast('페르소나가 저장되었습니다.');
+          }
+        });
+      }
+
+      // Delete User Persona
+      if (this.btnDeleteUserPersona) {
+        this.btnDeleteUserPersona.addEventListener('click', () => {
+          if (this.engine.userPersonas.length <= 1) {
+            alert('최소 1개의 페르소나는 유지되어야 합니다.');
+            return;
+          }
+          if (confirm('현재 페르소나(' + this.engine.userName + ')를 삭제하시겠습니까?')) {
+            this.engine.deleteUserPersona(this.engine.activeUserPersonaId);
+            this.renderUserPersonaSelector();
+            this.loadUserPersonaToUI();
+            this.showToast('페르소나가 삭제되었습니다.');
+          }
+        });
+      }
+
+      // Export / Import Personas
+      if (this.btnExportPersonas) {
+        this.btnExportPersonas.addEventListener('click', () => this.exportUserPersonasJson());
+      }
+      if (this.btnImportPersonas && this.personaFileInput) {
+        this.btnImportPersonas.addEventListener('click', () => this.personaFileInput.click());
+        this.personaFileInput.addEventListener('change', (e) => this.importUserPersonasJson(e));
+      }
+
+      // Save Character Settings
+      if (this.btnSaveCharSettings) {
+        this.btnSaveCharSettings.addEventListener('click', () => {
+          const pDesc = this.editPersonaDesc ? this.editPersonaDesc.value : '';
+          const sDesc = this.editScenarioDesc ? this.editScenarioDesc.value : '';
+          this.engine.saveActiveCharacterPersona(pDesc, sDesc);
+          this.engine.saveSettings();
+          this.showToast('캐릭터 설정이 저장되었습니다.');
+        });
+      }
+
+      // Save Custom Prompt
+      if (this.btnSavePrompt) {
+        this.btnSavePrompt.addEventListener('click', () => {
+          if (this.editCustomPrompt) {
+            this.engine.customPrompt = this.editCustomPrompt.value;
+          }
+          this.engine.saveSettings();
+          this.showToast('프롬프트가 저장되었습니다.');
+        });
+      }
+
+      // Language buttons (KO / EN / JA / ZH)
+      if (this.langChips) {
+        this.langChips.forEach(chip => {
+          chip.addEventListener('click', () => {
+            const lang = chip.getAttribute('data-lang') || 'ko';
+            this.engine.outputLanguage = lang;
+            this.engine.saveSettings();
+            this.applyI18nToUI();
+            
+            // 모든 국기 버튼 active 동기화
+            this.langChips.forEach(c => {
+              if (c.getAttribute('data-lang') === lang) c.classList.add('active');
+              else c.classList.remove('active');
+            });
+
+            const langLabels = {
+              ko: '언어: 한국어',
+              en: 'Language: English',
+              ja: '言語: 日本語',
+              zh: '语言: 中文'
+            };
+            this.showToast(langLabels[lang] || ('Language: ' + lang));
+          });
+        });
+      }
+
+      // Length chip buttons
+      if (this.lengthChips) {
+        this.lengthChips.forEach(chip => {
+          chip.addEventListener('click', () => {
+            this.lengthChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const len = chip.getAttribute('data-length');
+            this.engine.lengthPreset = len;
+            this.engine.saveSettings();
+            this.showToast('분량 변경: ' + chip.textContent);
+          });
+        });
+      }
+
+      // Font Size chip buttons
+      if (this.fontSizeChips) {
+        this.fontSizeChips.forEach(chip => {
+          chip.addEventListener('click', () => {
+            this.fontSizeChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const sz = chip.getAttribute('data-size');
+            this.engine.fontSizePreset = sz;
+            this.applyViewerStyleToChat();
+      this.applyI18nToUI();
+            this.engine.saveSettings();
+            this.showToast('글자 크기 변경: ' + chip.textContent);
+          });
+        });
+      }
+
+      // Line Height chip buttons
+      if (this.lineHeightChips) {
+        this.lineHeightChips.forEach(chip => {
+          chip.addEventListener('click', () => {
+            this.lineHeightChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const lh = chip.getAttribute('data-lh');
+            this.engine.lineHeightPreset = lh;
+            this.applyViewerStyleToChat();
+      this.applyI18nToUI();
+            this.engine.saveSettings();
+            this.showToast('줄간격 변경: ' + chip.textContent);
+          });
+        });
+      }
+
+      // Narrative Ratio Style
+      if (this.selectNarrativeStyle) {
+        this.selectNarrativeStyle.addEventListener('change', (e) => {
+          this.engine.narrativeStyle = e.target.value;
+          this.engine.saveSettings();
+          this.showToast('비중이 변경되었습니다.');
+        });
+      }
+
+      // Temperature
+      if (this.inputTemperature) {
+        this.inputTemperature.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.engine.temperature = val;
+          if (this.tempValDisplay) this.tempValDisplay.textContent = val.toFixed(2);
+          this.engine.saveSettings();
+        });
+      }
+
+      // Provider Change handler
+      if (this.selectProvider) {
+        this.selectProvider.addEventListener('change', (e) => {
+          this.onProviderChanged(e.target.value);
+        });
+      }
+
+      // Fetch Models Live Button (Gemini / OpenRouter)
+      if (this.btnFetchOpenRouterModels) {
+        this.btnFetchOpenRouterModels.addEventListener('click', async () => {
+          const key = this.inputApiKey ? this.inputApiKey.value.trim() : '';
+          const provider = this.selectProvider ? this.selectProvider.value : 'gemini';
+          if (!key) {
+            alert((provider === 'gemini' ? 'Google Gemini' : 'OpenRouter') + ' API 키를 먼저 입력하세요.');
+            return;
+          }
+          this.btnFetchOpenRouterModels.textContent = '조회중...';
+          try {
+            let models = [];
+            if (provider === 'gemini') {
+              models = await this.engine.fetchGeminiModels(key);
+            } else if (provider === 'openrouter') {
+              models = await this.engine.fetchOpenRouterModels(key);
+            } else {
+              alert('현재 제공자는 실시간 목록 조회를 지원하지 않습니다.');
+              return;
+            }
+
+            if (this.selectModel && models.length > 0) {
+              this.selectModel.innerHTML = '';
+              models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name;
+                this.selectModel.appendChild(opt);
+              });
+              this.showToast((provider === 'gemini' ? 'Gemini' : '오픈라우터') + ' 모델 ' + models.length + '개를 불러왔습니다.');
+            }
+          } catch (err) {
+            alert('모델 목록 조회 실패: ' + err.message);
+          } finally {
+            this.btnFetchOpenRouterModels.textContent = '목록 갱신';
+          }
+        });
+      }
+
+      // AI Model Settings Save
+      if (this.btnSaveSettings) {
+        this.btnSaveSettings.addEventListener('click', () => {
+          const provider = this.selectProvider ? this.selectProvider.value : 'gemini';
+          const key = this.inputApiKey ? this.inputApiKey.value.trim() : '';
+          this.engine.apiProvider = provider;
+          this.engine.apiKey = key;
+          this.engine.providerKeys[provider] = key;
+
+          if (provider === 'custom') {
+            const customUrl = this.inputCustomBaseUrl ? this.inputCustomBaseUrl.value.trim() : 'https://api.openai.com/v1';
+            const customModel = this.inputCustomModel ? this.inputCustomModel.value.trim() : 'default';
+            this.engine.customBaseUrl = customUrl;
+            this.engine.modelName = customModel;
+            this.engine.providerModels['custom'] = customModel;
+          } else {
+            const selectedModel = this.selectModel ? this.selectModel.value : 'gemini-2.5-flash';
+            this.engine.modelName = selectedModel;
+            this.engine.providerModels[provider] = selectedModel;
+          }
+          this.engine.saveSettings();
+          this.showToast('AI 모델 설정이 저장되었습니다.');
+        });
+      }
+
+      // Quick Symbol Toolbar Buttons
+      if (this.quickSymbolBtns && this.userInput) {
+        this.quickSymbolBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const wrapType = btn.getAttribute('data-wrap');
+            this.handleQuickSymbolInsert(wrapType);
+          });
+        });
+      }
+
+      // In-App Chat Search Events
+      if (this.btnToggleSearch) {
+        this.btnToggleSearch.addEventListener('click', () => this.toggleSearchBar());
+      }
+      if (this.btnCloseSearch) {
+        this.btnCloseSearch.addEventListener('click', () => this.closeSearchBar());
+      }
+      if (this.inputChatSearch) {
+        this.inputChatSearch.addEventListener('input', () => this.performChatSearch());
+      }
+      if (this.btnSearchPrev) {
+        this.btnSearchPrev.addEventListener('click', () => this.jumpSearchResult(-1));
+      }
+      if (this.btnSearchNext) {
+        this.btnSearchNext.addEventListener('click', () => this.jumpSearchResult(1));
+      }
+
+      // NAI Trigger Mode Change
+      if (this.selectNaiTriggerMode) {
+        this.selectNaiTriggerMode.addEventListener('change', (e) => {
+          if (this.groupNaiTurnInterval) {
+            // always visible
+          }
+        });
+      }
+
+      if (this.inputNaiTurnInterval) {
+        this.inputNaiTurnInterval.addEventListener('input', (e) => {
+          const val = parseInt(e.target.value, 10) || 5;
+          this.engine.naiTurnInterval = val;
+          if (this.turnIntervalDisplay) {
+            this.turnIntervalDisplay.textContent = val + '턴 마다 생성';
+          }
+          this.engine.saveSettings();
+        });
+      }
+
+      // NAI Settings Save
+      if (this.btnSaveNaiSettings) {
+        this.btnSaveNaiSettings.addEventListener('click', () => {
+          this.engine.naiEnabled = this.toggleNaiEnabled ? this.toggleNaiEnabled.checked : false;
+          this.engine.naiApiKey = this.inputNaiApiKey ? this.inputNaiApiKey.value.trim() : '';
+          this.engine.naiTriggerMode = this.selectNaiTriggerMode ? this.selectNaiTriggerMode.value : 'manual';
+          this.engine.naiTurnInterval = this.inputNaiTurnInterval ? parseInt(this.inputNaiTurnInterval.value, 10) || 5 : 5;
+          this.engine.naiModel = this.selectNaiModel ? this.selectNaiModel.value : 'nai-diffusion-5-full';
+          this.engine.naiPositivePrompt = this.inputNaiPositive ? this.inputNaiPositive.value.trim() : '';
+          this.engine.naiNegativePrompt = this.inputNaiNegative ? this.inputNaiNegative.value.trim() : '';
+          this.engine.saveSettings();
+          this.updateNaiButtonVisibility();
+          this.showToast('NovelAI 삽화 설정이 저장되었습니다.');
+        });
+      }
+
+      // Trigger NAI Art Button in Header
+      if (this.btnTriggerNaiArt) {
+        this.btnTriggerNaiArt.addEventListener('click', () => this.handleGenerateNaiArt());
+      }
+
+      // Reset Chat
+      if (this.btnResetChat) {
+        this.btnResetChat.addEventListener('click', () => {
+          if (confirm('대화 기록을 초기화하시겠습니까? (이전 기억 삭제)')) {
+            this.engine.resetChat();
+            this.renderChatLog();
+            this.showToast('대화가 초기화되었습니다.');
+          }
+        });
+      }
+
+      // Send Message
+      if (this.btnSend && this.userInput) {
+        this.btnSend.addEventListener('click', () => this.handleSendMessage());
+        this.userInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.handleSendMessage();
+          }
+        });
+      }
+    }
+
+    renderMemoryNotesList() {
+      if (!this.memoryNotesList) return;
+      this.memoryNotesList.innerHTML = '';
+      const notes = this.engine.memoryNotes || [];
+
+      if (notes.length === 0) {
+        this.memoryNotesList.innerHTML = '<div class="empty-note-hint">등록된 장기 기억이 없습니다.</div>';
+        return;
+      }
+
+      notes.forEach(note => {
+        const item = document.createElement('div');
+        item.className = 'memory-note-item';
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'memory-note-text';
+        textSpan.textContent = note.text;
+
+        const btnDel = document.createElement('button');
+        btnDel.type = 'button';
+        btnDel.className = 'btn-del-mem';
+        btnDel.textContent = '✕';
+        btnDel.title = '이 기억 삭제';
+        btnDel.addEventListener('click', () => {
+          this.engine.deleteMemoryNote(note.id);
+          this.renderMemoryNotesList();
+          this.showToast('기억이 삭제되었습니다.');
+        });
+
+        item.appendChild(textSpan);
+        item.appendChild(btnDel);
+        this.memoryNotesList.appendChild(item);
+      });
+    }
+
+    exportChatAsJson() {
+      const char = this.engine.getActiveCharacter();
+      const exportData = {
+        version: 'TouchRP_Backup_v1',
+        exportDate: new Date().toISOString(),
+        characterId: this.engine.activeCharId,
+        characterName: char.name,
+        userName: this.engine.userName,
+        userPersona: this.engine.userPersona,
+        memoryNotes: this.engine.memoryNotes,
+        chatHistory: this.engine.chatHistory
+      };
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '대화백업_' + char.name + '_' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      this.showToast('대화 백업 파일이 저장되었습니다.');
+    }
+
+    async importChatFromJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        let history = null;
+        let uName = null;
+        let uPersona = null;
+        let charId = null;
+        let notes = null;
+
+        try {
+          const data = JSON.parse(text);
+          if (Array.isArray(data.chatHistory)) {
+            history = data.chatHistory;
+            uName = data.userName;
+            uPersona = data.userPersona;
+            charId = data.characterId;
+            notes = data.memoryNotes;
+          } else if (Array.isArray(data)) {
+            history = data;
+          } else if (Array.isArray(data.messages)) {
+            history = data.messages.map(m => ({
+              role: m.is_user || m.role === 'user' ? 'user' : 'assistant',
+              content: m.mes || m.content || m.text || '',
+              thought: m.thought || ''
+            }));
+          }
+        } catch (jsonErr) {
+          history = this.parseTxtChatLog(text);
+        }
+
+        if (history && history.length > 0) {
+          if (charId && this.engine.characters.has(charId) && charId !== this.engine.activeCharId) {
+            this.engine.activeCharId = charId;
+            if (this.charSelect) this.charSelect.value = charId;
+            this.updateCharacterUI();
+          }
+
+          this.engine.chatHistory = history.map(h => ({
+            role: h.role === 'user' ? 'user' : 'assistant',
+            content: h.content || h.mes || h.text || '',
+            thought: h.thought || ''
+          }));
+
+          if (uName) this.engine.userName = uName;
+          if (uPersona) this.engine.userPersona = uPersona;
+          if (Array.isArray(notes)) this.engine.memoryNotes = notes;
+
+          this.engine.saveSettings();
+          this.loadSettingsToUI();
+          this.renderMemoryNotesList();
+          this.renderChatLog();
+          this.showToast('대화 및 기억이 성공적으로 복원되었습니다!');
+        } else {
+          alert('대화 기록을 인식할 수 없습니다. 올바른 백업 파일(.json 또는 .txt)인지 확인해 주세요.');
+        }
+      } catch (err) {
+        alert('백업 파일 로드 오류: ' + err.message);
+      }
+      this.chatBackupFileInput.value = '';
+    }
+
+    exportChatAsTxt() {
+      const char = this.engine.getActiveCharacter();
+      let txt = '=== ' + char.name + ' & ' + this.engine.userName + ' 롤플레이 기록 ===\n\n';
+      this.engine.chatHistory.forEach(msg => {
+        const sender = msg.role === 'assistant' ? char.name : this.engine.userName;
+        if (msg.thought) {
+          txt += '[' + sender + ' 속마음]: ' + msg.thought + '\n';
+        }
+        txt += sender + ':\n' + msg.content + '\n\n';
+        txt += '--------------------------------------------------\n\n';
+      });
+
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '소설_대화록_' + char.name + '_' + new Date().toISOString().slice(0, 10) + '.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+      this.showToast('텍스트(TXT) 소설 파일이 저장되었습니다.');
+    }
+
+    toggleSidebar() {
+      if (!this.leftPanel) return;
+      const isOpen = this.leftPanel.classList.toggle('open');
+      if (this.drawerOverlay) {
+        if (isOpen) {
+          this.drawerOverlay.classList.add('active');
+        } else {
+          this.drawerOverlay.classList.remove('active');
+        }
+      }
+    }
+
+    closeSidebar() {
+      if (this.leftPanel) this.leftPanel.classList.remove('open');
+      if (this.drawerOverlay) this.drawerOverlay.classList.remove('active');
+    }
+
+    onProviderChanged(provider) {
+      // 1. 이전 프로바이더의 입력창 키 임시 저장
+      const prevProvider = this.currentActiveProvider || this.engine.apiProvider || 'gemini';
+      if (this.inputApiKey && this.inputApiKey.value.trim()) {
+        this.engine.providerKeys[prevProvider] = this.inputApiKey.value.trim();
+      }
+      this.currentActiveProvider = provider;
+
+      // 2. 새 프로바이더의 저장된 키를 입력창에 자동 복원
+      if (this.inputApiKey) {
+        this.inputApiKey.value = this.engine.providerKeys[provider] || '';
+      }
+
+      // 3. UI 폼 그룹 표시/숨김
+      if (this.groupCustomBaseUrl) {
+        this.groupCustomBaseUrl.style.display = provider === 'custom' ? 'flex' : 'none';
+      }
+      if (this.groupInputCustomModel) {
+        this.groupInputCustomModel.style.display = provider === 'custom' ? 'flex' : 'none';
+      }
+      if (this.groupSelectModel) {
+        this.groupSelectModel.style.display = provider === 'custom' ? 'none' : 'flex';
+      }
+      if (this.btnFetchOpenRouterModels) {
+        this.btnFetchOpenRouterModels.style.display = (provider === 'gemini' || provider === 'openrouter') ? 'inline-block' : 'none';
+      }
+
+      if (provider === 'custom') {
+        if (this.inputCustomBaseUrl) this.inputCustomBaseUrl.value = this.engine.customBaseUrl || 'https://api.openai.com/v1';
+        if (this.inputCustomModel) this.inputCustomModel.value = this.engine.providerModels['custom'] || 'default';
+        return;
+      }
+
+      if (!this.selectModel) return;
+      this.selectModel.innerHTML = '';
+
+      let modelList = [];
+      if (provider === 'gemini') {
+        modelList = [
+          { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite (디폴트 / 무료 초고속)' },
+          { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite (차세대 플래시)' },
+          { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (최신 플래그십)' }
+        ];
+      } else if (provider === 'openrouter') {
+        modelList = [
+          { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+          { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (추론형)' },
+          { value: 'deepseek/deepseek-chat', label: 'DeepSeek V3' },
+          { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+          { value: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' }
+        ];
+      } else if (provider === 'claude') {
+        modelList = [
+          { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (최신 플래그십)' },
+          { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (초고속)' },
+          { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
+        ];
+      }
+
+      const savedSelectedModel = this.engine.providerModels[provider] || modelList[0]?.value;
+      modelList.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.value;
+        opt.textContent = m.label;
+        if (m.value === savedSelectedModel) opt.selected = true;
+        this.selectModel.appendChild(opt);
+      });
+    }
+
+    // 모바일 퀵 심볼 바 삽입 및 래핑 로직
+    handleQuickSymbolInsert(wrapType) {
+      if (!this.userInput) return;
+      const el = this.userInput;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const fullText = el.value;
+      const selectedText = fullText.substring(start, end);
+
+      if (wrapType === 'clear') {
+        el.value = '';
+        el.focus();
+        return;
+      }
+
+      let prefix = '';
+      let suffix = '';
+      if (wrapType === 'quote') {
+        prefix = '"';
+        suffix = '"';
+      } else if (wrapType === 'action') {
+        prefix = '*';
+        suffix = '*';
+      } else if (wrapType === 'thought') {
+        prefix = '(';
+        suffix = ')';
+      } else if (wrapType === 'wave') {
+        prefix = '~';
+        suffix = '';
+      }
+
+      if (selectedText.length > 0) {
+        // 선택 영역 감싸기
+        const newText = fullText.substring(0, start) + prefix + selectedText + suffix + fullText.substring(end);
+        el.value = newText;
+        el.focus();
+        el.setSelectionRange(start + prefix.length, end + prefix.length);
+      } else {
+        // 커서 위치에 삽입 후 커서를 안쪽으로 이동
+        const newText = fullText.substring(0, start) + prefix + suffix + fullText.substring(end);
+        el.value = newText;
+        el.focus();
+        const cursorPosition = start + prefix.length;
+        el.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }
+
+    // 대화 내 실시간 검색기
+    toggleSearchBar() {
+      if (!this.chatSearchBar) return;
+      const isHidden = this.chatSearchBar.style.display === 'none';
+      if (isHidden) {
+        this.chatSearchBar.style.display = 'flex';
+        if (this.inputChatSearch) {
+          this.inputChatSearch.focus();
+          if (this.inputChatSearch.value) this.performChatSearch();
+        }
+      } else {
+        this.closeSearchBar();
+      }
+    }
+
+    closeSearchBar() {
+      if (this.chatSearchBar) this.chatSearchBar.style.display = 'none';
+      this.clearSearchHighlights();
+    }
+
+    clearSearchHighlights() {
+      if (this.searchCountDisplay) this.searchCountDisplay.textContent = '0 / 0';
+      this.searchResults = [];
+      this.currentSearchIndex = -1;
+      this.renderChatLog();
+    }
+
+    performChatSearch() {
+      if (!this.inputChatSearch) return;
+      const query = this.inputChatSearch.value.trim();
+      if (!query) {
+        this.clearSearchHighlights();
+        return;
+      }
+
+      // 대화창 렌더링 후 하이라이트 노드 수집
+      this.renderChatLog();
+      if (!this.chatLog) return;
+
+      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedQuery})`, 'gi');
+
+      const textNodes = [];
+      const walk = document.createTreeWalker(this.chatLog, NodeFilter.SHOW_TEXT, null, false);
+      let n;
+      while (n = walk.nextNode()) {
+        if (n.parentNode && !n.parentNode.classList?.contains('msg-sender') && !n.parentNode.classList?.contains('thought-badge')) {
+          textNodes.push(n);
+        }
+      }
+
+      this.searchResults = [];
+      for (const node of textNodes) {
+        const val = node.nodeValue;
+        if (regex.test(val)) {
+          const span = document.createElement('span');
+          span.innerHTML = val.replace(regex, '<mark class="search-highlight">$1</mark>');
+          node.parentNode.replaceChild(span, node);
+        }
+      }
+
+      const allMarks = this.chatLog.querySelectorAll('.search-highlight');
+      this.searchResults = Array.from(allMarks);
+
+      if (this.searchResults.length > 0) {
+        this.currentSearchIndex = 0;
+        this.updateSearchHighlightFocus();
+      } else {
+        this.currentSearchIndex = -1;
+        if (this.searchCountDisplay) this.searchCountDisplay.textContent = '0 / 0';
+      }
+    }
+
+    updateSearchHighlightFocus() {
+      if (!this.searchResults || this.searchResults.length === 0) return;
+      this.searchResults.forEach((el, idx) => {
+        if (idx === this.currentSearchIndex) {
+          el.classList.add('current');
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          el.classList.remove('current');
+        }
+      });
+      if (this.searchCountDisplay) {
+        this.searchCountDisplay.textContent = `${this.currentSearchIndex + 1} / ${this.searchResults.length}`;
+      }
+    }
+
+    jumpSearchResult(dir) {
+      if (!this.searchResults || this.searchResults.length === 0) return;
+      this.currentSearchIndex += dir;
+      if (this.currentSearchIndex < 0) this.currentSearchIndex = this.searchResults.length - 1;
+      if (this.currentSearchIndex >= this.searchResults.length) this.currentSearchIndex = 0;
+      this.updateSearchHighlightFocus();
+    }
+
+    updateNaiButtonVisibility() {
+      if (this.btnTriggerNaiArt) {
+        this.btnTriggerNaiArt.style.display = this.engine.naiEnabled && this.engine.naiApiKey ? 'inline-block' : 'none';
+      }
+    }
+
+    async handleGenerateNaiArt() {
+      if (!this.engine.naiEnabled || !this.engine.naiApiKey) {
+        alert('NovelAI 설정에서 API 키를 입력하고 기능을 켜주세요.');
+        return;
+      }
+
+      const char = this.engine.getActiveCharacter();
+      const prompt = prompt('생성할 삽화의 프롬프트(영문 태그)를 입력하세요:', '1boy, ' + (char.name || 'character') + ', solo, upper body, cinematic lighting, looking at viewer');
+      if (!prompt) return;
+
+      this.btnTriggerNaiArt.disabled = true;
+      this.btnTriggerNaiArt.textContent = '그리는중...';
+      try {
+        const imgUrl = await this.engine.generateNaiIllustration(prompt);
+        if (imgUrl) {
+          // 채팅창에 삽화 메시지 추가
+          this.engine.chatHistory.push({
+            role: 'assistant',
+            content: '🎨 *[NovelAI 실시간 일러스트 삽화 생성 완료]*\n<img src="' + imgUrl + '" class="nai-bubble-img">',
+            thought: ''
+          });
+          this.engine.saveSettings();
+          this.renderChatLog();
+          this.showToast('일러스트 삽화가 생성되었습니다!');
+        }
+      } catch (err) {
+        alert('삽화 생성 오류: ' + err.message);
+      } finally {
+        this.btnTriggerNaiArt.disabled = false;
+        this.btnTriggerNaiArt.textContent = '🎨 삽화';
+      }
+    }
+
+        applyI18nToUI() {
+      const lang = this.engine.outputLanguage || 'ko';
+      const d = I18N_DICT[lang] || I18N_DICT.ko;
+
+      const setT = (id, text) => {
+        const el = document.getElementById(id);
+        if (el && text) el.textContent = text;
+      };
+
+      const setAttr = (id, attr, text) => {
+        const el = document.getElementById(id);
+        if (el && text) {
+          if (typeof el.setAttribute === 'function') {
+            el.setAttribute(attr, text);
+          } else {
+            el[attr] = text;
+          }
+        }
+      };
+
+      // Accordion Titles
+      setT('titleCharSelect', d.charSelectTitle);
+      setT('titleUserPersona', d.userPersonaTitle);
+      setT('titleMemory', d.memoryTitle);
+      setT('titleCharSettings', d.charSettingsTitle);
+      setT('titlePrompt', d.promptTitle);
+      setT('titleAiModel', d.aiModelTitle);
+      setT('titleNai', d.naiTitle);
+      setT('titleBackup', d.backupTitle);
+      setT('titleNarrative', d.narrativeTitle);
+      setT('titleViewerStyle', d.viewerTitle);
+      setT('titleHelpGuide', d.helpGuideTitle);
+
+      // Buttons
+      setT('btnImportCard', d.btnAddCard);
+      setT('btnCreateNewPersona', d.btnNewPersona);
+      setT('btnSaveUserPersona', d.btnSavePersona);
+      setT('btnDeleteUserPersona', d.btnDeletePersona);
+      setT('btnExportPersonas', d.btnExportPersonas);
+      setT('btnImportPersonas', d.btnImportPersonas);
+      setT('btnAddMemoryNote', d.btnAddMemory);
+      setT('btnClearAllMemoryNotes', d.btnClearAllMemory);
+      setT('btnSaveCharSettings', d.btnSaveCharSettings);
+      setT('btnSavePrompt', d.btnSavePrompt);
+      setT('btnFetchOpenRouterModels', d.btnRefreshModels);
+      setT('btnSaveSettings', d.btnSaveApi);
+      setT('btnSaveNaiSettings', d.btnSaveNai);
+      setT('btnExportChatJson', d.btnExportBackup);
+      setT('btnImportChatJson', d.btnImportBackup);
+      setT('btnExportChatTxt', d.btnExportTxt);
+      setT('btnClearCurrentMemory', d.btnClearChat);
+      setT('btnResetChat', d.btnReset);
+      setT('btnSend', d.btnSend);
+
+      // Quick Symbol Toolbar Buttons
+      const btnQuote = document.querySelector('.btn-quick-symbol[data-wrap="quote"]');
+      if (btnQuote && d.symQuote) btnQuote.textContent = d.symQuote;
+      const btnAction = document.querySelector('.btn-quick-symbol[data-wrap="action"]');
+      if (btnAction && d.symAction) btnAction.textContent = d.symAction;
+      const btnThought = document.querySelector('.btn-quick-symbol[data-wrap="thought"]');
+      if (btnThought && d.symThought) btnThought.textContent = d.symThought;
+      const btnClear = document.querySelector('.btn-quick-symbol[data-wrap="clear"]');
+      if (btnClear && d.symClear) btnClear.textContent = d.symClear;
+
+      // Thought Badge & API Guide
+      const thoughtBadgeEl = document.querySelector('.thought-badge');
+      if (thoughtBadgeEl && d.thoughtBadge) thoughtBadgeEl.textContent = d.thoughtBadge;
+      setT('apiKeyGuideDesc', d.apiKeyGuide);
+
+      // Placeholders
+      setAttr('userInput', 'placeholder', d.inputPlaceholder);
+      setAttr('inputNewMemory', 'placeholder', d.memoryInputPlaceholder);
+      setAttr('inputChatSearch', 'placeholder', d.searchPlaceholder);
+    }
+
+
+    loadSettingsToUI() {
+      this.renderUserPersonaSelector();
+      this.loadUserPersonaToUI();
+
+      // AI Model Settings
+      if (this.selectProvider) this.selectProvider.value = this.engine.apiProvider || 'gemini';
+      this.onProviderChanged(this.engine.apiProvider || 'gemini');
+      if (this.inputApiKey) this.inputApiKey.value = this.engine.apiKey || '';
+      if (this.inputCustomBaseUrl) this.inputCustomBaseUrl.value = this.engine.customBaseUrl || 'https://api.openai.com/v1';
+      if (this.engine.apiProvider === 'custom') {
+        if (this.inputCustomModel) this.inputCustomModel.value = this.engine.modelName || '';
+      } else {
+        if (this.selectModel) this.selectModel.value = this.engine.modelName || 'gemini-3.1-flash-lite';
+      }
+
+      // NAI Settings
+      if (this.toggleNaiEnabled) this.toggleNaiEnabled.checked = this.engine.naiEnabled || false;
+      if (this.inputNaiApiKey) this.inputNaiApiKey.value = this.engine.naiApiKey || '';
+      if (this.selectNaiTriggerMode) {
+        this.selectNaiTriggerMode.value = this.engine.naiTriggerMode || 'manual';
+        if (this.groupNaiTurnInterval) {
+          // always visible
+        }
+      }
+      if (this.inputNaiTurnInterval) this.inputNaiTurnInterval.value = this.engine.naiTurnInterval || 5;
+      if (this.turnIntervalDisplay) this.turnIntervalDisplay.textContent = (this.engine.naiTurnInterval || 5) + '턴 마다';
+      if (this.selectNaiModel) this.selectNaiModel.value = this.engine.naiModel || 'nai-diffusion-5-full';
+      if (this.inputNaiPositive) this.inputNaiPositive.value = this.engine.naiPositivePrompt || 'masterpiece, best quality, aesthetic, highly detailed, beautiful lighting, cinematic composition';
+      if (this.inputNaiNegative) this.inputNaiNegative.value = this.engine.naiNegativePrompt || 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry';
+      this.updateNaiButtonVisibility();
+
+      // Custom Prompt
+      if (this.editCustomPrompt) this.editCustomPrompt.value = this.engine.customPrompt || '';
+
+      // Lang chips
+      if (this.langChips) {
+        const currentLang = this.engine.outputLanguage || 'ko';
+        this.langChips.forEach(chip => {
+          if (chip.getAttribute('data-lang') === currentLang) {
+            chip.classList.add('active');
+          } else {
+            chip.classList.remove('active');
+          }
+        });
+      }
+
+      // Length chips
+      if (this.lengthChips) {
+        const currentLen = this.engine.lengthPreset || 'standard';
+        this.lengthChips.forEach(chip => {
+          if (chip.getAttribute('data-length') === currentLen) {
+            chip.classList.add('active');
+          } else {
+            chip.classList.remove('active');
+          }
+        });
+      }
+
+      // Font Size chips
+      if (this.fontSizeChips) {
+        const currentSize = this.engine.fontSizePreset || 'medium';
+        this.fontSizeChips.forEach(chip => {
+          if (chip.getAttribute('data-size') === currentSize) {
+            chip.classList.add('active');
+          } else {
+            chip.classList.remove('active');
+          }
+        });
+      }
+
+      // Line Height chips
+      if (this.lineHeightChips) {
+        const currentLh = this.engine.lineHeightPreset || 'normal';
+        this.lineHeightChips.forEach(chip => {
+          if (chip.getAttribute('data-lh') === currentLh) {
+            chip.classList.add('active');
+          } else {
+            chip.classList.remove('active');
+          }
+        });
+      }
+
+      this.applyViewerStyleToChat();
+      this.applyI18nToUI();
+
+      if (this.selectNarrativeStyle) this.selectNarrativeStyle.value = this.engine.narrativeStyle || 'balanced';
+      if (this.inputTemperature) this.inputTemperature.value = this.engine.temperature || 0.85;
+      if (this.tempValDisplay) this.tempValDisplay.textContent = (this.engine.temperature || 0.85).toFixed(2);
+    }
+
+    exportUserPersonasJson() {
+      const data = {
+        version: 'TouchRP_Personas_v1',
+        exportDate: new Date().toISOString(),
+        userPersonas: this.engine.userPersonas,
+        activeUserPersonaId: this.engine.activeUserPersonaId
+      };
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '내_페르소나목록_' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      this.showToast('페르소나 목록 파일이 저장되었습니다.');
+    }
+
+    async importUserPersonasJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (Array.isArray(data.userPersonas)) {
+          this.engine.userPersonas = data.userPersonas;
+          if (data.activeUserPersonaId) this.engine.activeUserPersonaId = data.activeUserPersonaId;
+          this.engine.syncActivePersona();
+          this.engine.saveSettings();
+          this.renderUserPersonaSelector();
+          this.loadUserPersonaToUI();
+          this.showToast('페르소나 목록(' + data.userPersonas.length + '개)을 성공적으로 불러왔습니다!');
+        } else {
+          alert('올바른 페르소나 백업 파일(.json)이 아닙니다.');
+        }
+      } catch (err) {
+        alert('페르소나 파일 로드 오류: ' + err.message);
+      }
+      if (this.personaFileInput) this.personaFileInput.value = '';
+    }
+
+    renderUserPersonaSelector() {
+      if (!this.selectUserPersona) return;
+      this.selectUserPersona.innerHTML = '';
+      const list = this.engine.userPersonas || [];
+      list.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name || '페르소나';
+        if (p.id === this.engine.activeUserPersonaId) opt.selected = true;
+        this.selectUserPersona.appendChild(opt);
+      });
+    }
+
+    loadUserPersonaToUI() {
+      const p = this.engine.getActiveUserPersona();
+      if (p) {
+        if (this.inputUserName) this.inputUserName.value = p.name || '당신';
+        if (this.inputUserPersona) this.inputUserPersona.value = p.personaDesc || '';
+        if (this.selectUserPersona) this.selectUserPersona.value = p.id;
+      }
+    }
+
+    renderCharacterSelector() {
+      if (!this.charSelect) return;
+      this.charSelect.innerHTML = '';
+      for (const [id, char] of this.engine.characters.entries()) {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = char.name;
+        if (id === this.engine.activeCharId) opt.selected = true;
+        this.charSelect.appendChild(opt);
+      }
+    }
+
+    updateCharacterUI() {
+      const char = this.engine.getActiveCharacter();
+      if (!char) return;
+
+      if (this.charName) this.charName.textContent = char.name;
+      if (this.headerCharName) this.headerCharName.textContent = char.name;
+
+      const avatarSrc = char.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%232a324b"/><text x="50" y="55" fill="%23fff" font-size="32" text-anchor="middle" dominant-baseline="middle">👤</text></svg>';
+
+      if (this.charAvatar) {
+        this.charAvatar.src = avatarSrc;
+        this.charAvatar.style.display = 'block';
+      }
+      if (this.headerAvatar) {
+        this.headerAvatar.src = avatarSrc;
+        this.headerAvatar.style.display = 'block';
+      }
+
+      if (this.charTags) {
+        this.charTags.innerHTML = '';
+        const tags = char.tags || [];
+        tags.forEach(t => {
+          const span = document.createElement('span');
+          span.className = 'char-tag';
+          span.textContent = '#' + t;
+          this.charTags.appendChild(span);
+        });
+      }
+
+      if (this.editPersonaDesc) {
+        this.editPersonaDesc.value = char.personaDesc || '';
+      }
+      if (this.editScenarioDesc) {
+        this.editScenarioDesc.value = char.scenarioDesc || '';
+      }
+    }
+
+    applyViewerStyleToChat() {
+      if (!this.chatLog) return;
+      this.chatLog.classList.remove('font-small', 'font-medium', 'font-large', 'font-xlarge');
+      this.chatLog.classList.remove('lh-compact', 'lh-normal', 'lh-relaxed');
+
+      this.chatLog.classList.add('font-' + (this.engine.fontSizePreset || 'medium'));
+      this.chatLog.classList.add('lh-' + (this.engine.lineHeightPreset || 'normal'));
+    }
+
+    renderChatLog() {
+      if (!this.chatLog) return;
+      this.chatLog.innerHTML = '';
+
+      let latestThought = '';
+      const lang = this.engine.outputLanguage || 'ko';
+      const d = I18N_DICT[lang] || I18N_DICT.ko;
+
+      this.engine.chatHistory.forEach((msg, idx) => {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble ' + (msg.role === 'assistant' ? 'assistant-msg' : 'user-msg');
+
+        // Bubble Header
+        const header = document.createElement('div');
+        header.className = 'bubble-header';
+
+        const sender = document.createElement('div');
+        sender.className = 'msg-sender';
+        sender.textContent = msg.role === 'assistant' ? this.engine.getActiveCharacter().name : this.engine.userName;
+
+        const actions = document.createElement('div');
+        actions.className = 'msg-actions';
+
+        if (msg.role === 'assistant') {
+          const btnReroll = document.createElement('button');
+          btnReroll.type = 'button';
+          btnReroll.className = 'btn-msg-action btn-msg-resend';
+          btnReroll.textContent = d.btnReroll || '🔄 리롤';
+          btnReroll.title = 'Reroll / Regenerate';
+          btnReroll.addEventListener('click', () => this.resendFromMessage(idx));
+
+          const btnEdit = document.createElement('button');
+          btnEdit.type = 'button';
+          btnEdit.className = 'btn-msg-action';
+          btnEdit.textContent = d.btnEdit || '✏️ 수정';
+          btnEdit.title = 'Edit';
+          btnEdit.addEventListener('click', () => this.startEditMessage(idx));
+
+          const btnDel = document.createElement('button');
+          btnDel.type = 'button';
+          btnDel.className = 'btn-msg-action btn-msg-delete';
+          btnDel.textContent = d.btnDelete || '🗑️ 삭제';
+          btnDel.title = 'Delete';
+          btnDel.addEventListener('click', () => this.deleteMessage(idx));
+
+          actions.appendChild(btnReroll);
+          actions.appendChild(btnEdit);
+          actions.appendChild(btnDel);
+        } else {
+          const btnEdit = document.createElement('button');
+          btnEdit.type = 'button';
+          btnEdit.className = 'btn-msg-action';
+          btnEdit.textContent = d.btnEdit || '✏️ 수정';
+          btnEdit.title = 'Edit';
+          btnEdit.addEventListener('click', () => this.startEditMessage(idx));
+
+          const btnResend = document.createElement('button');
+          btnResend.type = 'button';
+          btnResend.className = 'btn-msg-action btn-msg-resend';
+          btnResend.textContent = d.btnResend || '↵ 재전송';
+          btnResend.title = 'Resend from here';
+          btnResend.addEventListener('click', () => this.resendFromMessage(idx));
+
+          const btnDel = document.createElement('button');
+          btnDel.type = 'button';
+          btnDel.className = 'btn-msg-action btn-msg-delete';
+          btnDel.textContent = d.btnDelete || '🗑️ 삭제';
+          btnDel.title = 'Delete';
+          btnDel.addEventListener('click', () => this.deleteMessage(idx));
+
+          actions.appendChild(btnEdit);
+          actions.appendChild(btnResend);
+          actions.appendChild(btnDel);
+        }
+
+        header.appendChild(sender);
+        header.appendChild(actions);
+        bubble.appendChild(header);
+
+        // Content / Edit mode
+        if (this.editingIndex === idx) {
+          const editBox = document.createElement('div');
+          editBox.className = 'bubble-edit-area';
+
+          const textarea = document.createElement('textarea');
+          textarea.className = 'bubble-edit-textarea';
+          textarea.rows = 4;
+          textarea.value = msg.content;
+
+          const btnRow = document.createElement('div');
+          btnRow.className = 'bubble-edit-btns';
+
+          const btnSave = document.createElement('button');
+          btnSave.type = 'button';
+          btnSave.className = 'btn-mini';
+          btnSave.textContent = '저장만';
+          btnSave.title = '내용만 수정하여 저장';
+          btnSave.addEventListener('click', () => {
+            msg.content = textarea.value.trim();
+            this.editingIndex = -1;
+            this.engine.saveSettings();
+            this.renderChatLog();
+            this.showToast('대사가 수정되었습니다.');
+          });
+
+          const btnSaveAndResend = document.createElement('button');
+          btnSaveAndResend.type = 'button';
+          btnSaveAndResend.className = 'btn-mini btn-primary';
+          btnSaveAndResend.textContent = msg.role === 'user' ? '수정 후 전송 ↵' : '수정 저장';
+          btnSaveAndResend.title = '수정한 내용으로 이어서 답변 다시 받기';
+          btnSaveAndResend.addEventListener('click', () => {
+            msg.content = textarea.value.trim();
+            this.editingIndex = -1;
+            if (msg.role === 'user') {
+              this.engine.chatHistory = this.engine.chatHistory.slice(0, idx + 1);
+              this.engine.saveSettings();
+              this.triggerAiResponseAfterEdit();
+            } else {
+              this.engine.saveSettings();
+              this.renderChatLog();
+              this.showToast('대사가 수정되었습니다.');
+            }
+          });
+
+          const btnCancel = document.createElement('button');
+          btnCancel.type = 'button';
+          btnCancel.className = 'btn-mini';
+          btnCancel.textContent = '취소';
+          btnCancel.addEventListener('click', () => {
+            this.editingIndex = -1;
+            this.renderChatLog();
+          });
+
+          btnRow.appendChild(btnCancel);
+          btnRow.appendChild(btnSave);
+          if (msg.role === 'user') {
+            btnRow.appendChild(btnSaveAndResend);
+          }
+          editBox.appendChild(textarea);
+          editBox.appendChild(btnRow);
+          bubble.appendChild(editBox);
+        } else {
+          const content = document.createElement('div');
+          content.className = 'msg-content';
+          content.innerHTML = this.formatRPText(msg.content);
+          bubble.appendChild(content);
+        }
+
+        this.chatLog.appendChild(bubble);
+
+        if (msg.role === 'assistant' && msg.thought) {
+          latestThought = msg.thought;
+        }
+      });
+
+      if (this.thoughtBox && this.thoughtText) {
+        if (latestThought) {
+          this.thoughtText.textContent = '"' + latestThought + '"';
+          this.thoughtBox.style.display = 'flex';
+        } else {
+          this.thoughtBox.style.display = 'none';
+        }
+      }
+
+      this.chatLog.scrollTop = this.chatLog.scrollHeight;
+    }
+
+    async resendFromMessage(idx) {
+      const msg = this.engine.chatHistory[idx];
+      if (!msg) return;
+
+      if (msg.role === 'user') {
+        if (confirm('이 질문/지문으로 돌아가서 답변을 다시 받으시겠습니까? (이후 대화는 새로 생성됩니다)')) {
+          this.engine.chatHistory = this.engine.chatHistory.slice(0, idx + 1);
+          this.engine.saveSettings();
+          await this.triggerAiResponseAfterEdit();
+        }
+      } else {
+        if (confirm('이 답변을 취소하고 새로운 답변을 다시 받으시겠습니까?')) {
+          this.engine.chatHistory = this.engine.chatHistory.slice(0, idx);
+          this.engine.saveSettings();
+          await this.triggerAiResponseAfterEdit();
+        }
+      }
+    }
+
+    async triggerAiResponseAfterEdit() {
+      if (!this.engine.apiKey) {
+        alert('AI 모델 API 키가 설정되지 않았습니다.');
+        return;
+      }
+
+      this.btnSend.disabled = true;
+      this.btnSend.textContent = '생각 중...';
+      this.renderChatLog();
+
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = 'chat-bubble assistant-msg loading-bubble';
+      loadingBubble.innerHTML = '<div class="msg-sender">' + this.engine.getActiveCharacter().name + '</div><div class="msg-content"><span class="spinner">✦</span> 답변을 새로 작성하고 있습니다...</div>';
+      this.chatLog.appendChild(loadingBubble);
+      this.chatLog.scrollTop = this.chatLog.scrollHeight;
+
+      try {
+        await this.engine.generateAssistantTurn(null);
+        this.renderChatLog();
+        this.updateMemoryInfoText();
+      } catch (err) {
+        alert('재생성 실패: ' + err.message);
+        this.renderChatLog();
+      } finally {
+        this.btnSend.disabled = false;
+        this.btnSend.textContent = '전송';
+      }
+    }
+
+    startEditMessage(index) {
+      this.editingIndex = index;
+      this.renderChatLog();
+    }
+
+    deleteMessage(index) {
+      if (confirm('이 대사를 삭제하시겠습니까?')) {
+        this.engine.chatHistory.splice(index, 1);
+        this.editingIndex = -1;
+        this.engine.saveSettings();
+        this.renderChatLog();
+        this.showToast('대사가 삭제되었습니다.');
+      }
+    }
+
+    formatRPText(text) {
+      if (!text) return '';
+      let escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      escaped = escaped.replace(/(".*?")/g, '<span class="rp-dialogue">$1</span>');
+      escaped = escaped.replace(/(\*[\s\S]*?\*)/g, '<span class="rp-action">$1</span>');
+      escaped = escaped.replace(/\n/g, '<br>');
+
+      return escaped;
+    }
+
+    async handleSendMessage() {
+      if (!this.userInput) return;
+      const text = this.userInput.value.trim();
+      if (!text) return;
+
+      if (!this.engine.apiKey) {
+        alert('API 키를 먼저 입력하고 저장해 주세요. (좌측 설정 탭)');
+        if (this.leftPanel) this.leftPanel.classList.add('open');
+        const apiSec = document.getElementById('sectionApi');
+        if (apiSec) apiSec.classList.remove('collapsed');
+        return;
+      }
+
+      // 입력창 비우고 유저 메시지를 대화 기록에 먼저 안전하게 보존!
+      this.userInput.value = '';
+      this.btnSend.disabled = true;
+      this.btnSend.textContent = '생각 중...';
+
+      // 1. 유저 메시지를 히스토리에 먼저 영구 추가 및 저장 (절대 사라지지 않음)
+      this.engine.chatHistory.push({
+        role: 'user',
+        content: text
+      });
+      this.engine.saveSettings();
+      this.renderChatLog();
+
+      // 2. 로딩 말풍선 표시
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = 'chat-bubble assistant-msg loading-bubble';
+      loadingBubble.innerHTML = '<div class="msg-sender">' + this.engine.getActiveCharacter().name + '</div><div class="msg-content"><span class="spinner">✦</span> 답변을 작성하고 있습니다...</div>';
+      this.chatLog.appendChild(loadingBubble);
+      this.chatLog.scrollTop = this.chatLog.scrollHeight;
+
+      try {
+        // 3. AI 응답 생성 요청 (generateAssistantTurn)
+        await this.engine.generateAssistantTurn(null);
+        this.renderChatLog();
+        this.updateMemoryInfoText();
+      } catch (err) {
+        // [중요]: 오류가 나도 유저 메시지는 절대로 삭제(pop)하지 않고 대화창에 그대로 남김!
+        alert('답변 생성 실패 (네트워크/API 오류): ' + err.message + '\n\n* 작성하신 메시지는 대화창에 안전하게 보존되어 있으니 [수정·재전송] 버튼으로 다시 시도하실 수 있습니다.');
+        this.renderChatLog();
+        this.updateMemoryInfoText();
+      } finally {
+        this.btnSend.disabled = false;
+        this.btnSend.textContent = '전송';
+      }
+    }
+
+    showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'rp-toast';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+  }
+
+  root.TouchRPUIController = TouchRPUIController;
+
+  async function initTouchRP() {
+    if (!window.app) {
+      window.app = new TouchRPUIController();
+      await window.app.init();
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTouchRP);
+    } else {
+      initTouchRP();
+    }
+  }
+
+})(typeof window !== 'undefined' ? window : global);
+
+</script>
+</body>
+</html>

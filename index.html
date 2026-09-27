@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Synapse Engine (시냅스 엔진) — 인터랙티브 AI 롤플레이</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- 모바일/화면 딤 배경 -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+
+    <!-- [좌측 설정창 패널] -->
+    <aside class="left-panel collapsed" id="leftPanel">
+      
+      <!-- 패널 접힘/펼침 핸들 버튼 -->
+      <button type="button" class="drawer-handle-tab" id="btnToggleSideHandle" title="설정창 열기/닫기">
+        <span class="handle-icon">◀</span>
+      </button>
+
+      <div class="panel-inner-scroll">
+        <!-- 1. 캐릭터 선택 및 요약 카드 -->
+        <section class="panel-section character-section">
+          <div class="section-header">
+            <h2 class="section-title" id="titleCharSelect">캐릭터 선택</h2>
+            <div class="header-btns">
+              <button type="button" class="btn-mini" id="btnImportCard" title="외부 캐릭터 카드(.png, .json) 가져오기">카드 추가</button>
+              <input type="file" id="cardFileInput" accept=".png,.json" style="display: none;">
+            </div>
+          </div>
+
+          <!-- 캐릭터 선택 셀렉트 박스 -->
+          <div class="form-group">
+            <select id="charSelect" class="form-select"></select>
+          </div>
+
+          <!-- 캐릭터 카드 뷰 (얼굴 이미지 & 기본 정보) -->
+          <div class="char-profile-card">
+            <div class="avatar-frame">
+              <img id="charAvatar" src="" alt="캐릭터 아바타" class="char-avatar-img">
+            </div>
+            <div class="char-info">
+              <h3 class="char-name" id="charName">-</h3>
+              <div class="char-tags" id="charTags"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. [내 페르소나 관리] -->
+        <section class="panel-section accordion-section" id="sectionUserPersona">
+          <div class="section-header accordion-toggle" data-target="userPersonaContent">
+            <h2 class="section-title" id="titleUserPersona">내 페르소나 관리</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="userPersonaContent">
+            <div class="form-group">
+              <div class="label-with-val">
+                <label for="selectUserPersona">페르소나 슬롯</label>
+                <button type="button" class="btn-mini" id="btnCreateNewPersona">+ 새 페르소나</button>
+              </div>
+              <select id="selectUserPersona" class="form-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="inputUserName">내 이름 / 호칭</label>
+              <input type="text" id="inputUserName" class="form-input" value="당신" placeholder="이 페르소나의 이름/호칭">
+            </div>
+
+            <div class="form-group">
+              <label for="inputUserPersona">내 성격 / 외형 / 관계 설정</label>
+              <textarea id="inputUserPersona" class="form-textarea" rows="4" placeholder="예: 차분하고 다정한 성격. 위무선의 오랜 동문. 영력이 높은 고소 남씨 출신 수사."></textarea>
+            </div>
+
+            <div class="btn-grid-dual">
+              <button type="button" class="btn-mini btn-primary" id="btnSaveUserPersona">현재 페르소나 저장</button>
+              <button type="button" class="btn-mini btn-danger" id="btnDeleteUserPersona" title="현재 선택된 페르소나 삭제">페르소나 삭제</button>
+            </div>
+            
+            <div class="btn-grid-dual" style="margin-top: 4px;">
+              <button type="button" class="btn-mini" id="btnExportPersonas" title="내가 만든 모든 페르소나들을 JSON 파일로 백업/저장">페르소나 파일 저장</button>
+              <button type="button" class="btn-mini" id="btnImportPersonas" title="저장해둔 페르소나 파일 불러오기">페르소나 파일 불러오기</button>
+              <input type="file" id="personaFileInput" accept=".json" style="display: none;">
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. [세션 간 장기 기억 (메모리 노트)] -->
+        <section class="panel-section accordion-section collapsed" id="sectionLongTermMemory">
+          <div class="section-header accordion-toggle" data-target="longTermMemoryContent">
+            <h2 class="section-title" id="titleMemory">장기 기억 노트 (메모리)</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="longTermMemoryContent">
+            <!-- 기억 저장 위치 안내 가이드 -->
+            <div class="memory-guide-box">
+              <span class="guide-title">저장 안내:</span>
+              <p class="guide-desc">장기 기억은 외부 서버가 아닌 <strong>이 기기의 브라우저 내부(localStorage)</strong>에 안전하게 보관됩니다. 아래에서 개별 삭제하거나 전체 삭제로 언제든 깔끔하게 정리할 수 있습니다.</p>
+            </div>
+
+            <div class="memory-input-group">
+              <textarea id="inputNewMemory" class="form-textarea" rows="2" placeholder="캐릭터가 영구히 기억할 중요한 사건, 약속, 사실을 입력하세요 (예: 지난밤 처마 밑에서 천자소를 마심)"></textarea>
+              <div class="btn-grid-dual">
+                <button type="button" class="btn-mini btn-primary" id="btnAddMemoryNote">기억 추가</button>
+                <button type="button" class="btn-mini" id="btnSummarizeChat" title="지금까지 나눈 대화를 AI가 자동으로 3줄 압축하여 장기 기억에 등록">✨ 대화 AI 자동요약</button>
+              </div>
+            </div>
+
+            <div class="memory-notes-container">
+              <div class="label-with-val">
+                <span class="sub-label">보존 중인 핵심 기억 목록:</span>
+                <button type="button" class="btn-text-danger" id="btnClearAllMemoryNotes" title="등록된 모든 장기 기억 한번에 삭제">전체 비우기</button>
+              </div>
+              <div class="memory-notes-list" id="memoryNotesList">
+                <div class="empty-note-hint">등록된 장기 기억이 없습니다.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. [커스텀 프롬프트 입력란] -->
+        <section class="panel-section accordion-section collapsed" id="sectionPrompt">
+          <div class="section-header accordion-toggle" data-target="promptContent">
+            <h2 class="section-title" id="titlePrompt">프롬프트 입력란</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="promptContent">
+            <div class="form-group">
+              <label for="editCustomPrompt">추가 시스템 프롬프트 / 특별 지침</label>
+              <textarea id="editCustomPrompt" class="form-textarea" rows="4" placeholder="AI에게 전달할 특별 프롬프트/규칙을 자유롭게 작성하세요"></textarea>
+            </div>
+            <button type="button" class="btn-block btn-primary" id="btnSavePrompt">프롬프트 저장</button>
+          </div>
+        </section>
+
+        <!-- 6. [AI 모델 설정] (구글 / 오픈라우터 / 커스텀) -->
+        <section class="panel-section accordion-section collapsed" id="sectionApi">
+          <div class="section-header accordion-toggle" data-target="apiContent">
+            <h2 class="section-title" id="titleAiModel">AI 모델 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="apiContent">
+            <!-- 제공자 선택 -->
+            <div class="form-group">
+              <label for="selectProvider">AI 제공자 (Provider)</label>
+              <select id="selectProvider" class="form-select">
+                <option value="gemini" selected>Google Gemini (공식 / 고속)</option>
+                <option value="openrouter">OpenRouter (오픈라우터)</option>
+                <option value="claude">Anthropic Claude (공식 직결)</option>
+                <option value="custom">커스텀 (Custom API / OpenAI 호환 / Ollama)</option>
+              </select>
+            </div>
+
+            <!-- 커스텀 API Base URL (커스텀 선택 시 표시) -->
+            <div class="form-group" id="groupCustomBaseUrl" style="display: none;">
+              <label for="inputCustomBaseUrl">API Base URL</label>
+              <input type="text" id="inputCustomBaseUrl" class="form-input" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1 또는 http://localhost:11434/v1">
+            </div>
+
+            <!-- API Key -->
+            <div class="form-group">
+              <label for="inputApiKey">API Key</label>
+              <input type="password" id="inputApiKey" class="form-input" placeholder="API 키를 입력하세요 (Ollama 사용 시 비워둠 가능)">
+            </div>
+
+            <!-- API Key 저장 위치 및 유실 방지 안내 팁 -->
+            <div class="api-guide-box" id="apiKeyGuideBox">
+              <span class="guide-title">🔒 보안 및 저장 안내:</span>
+              <p class="guide-desc" id="apiKeyGuideDesc">입력하신 API Key는 외부 서버로 전송되지 않고 <strong>이 기기의 브라우저 내부(IndexedDB)</strong>에 안전하게 보관됩니다. 브라우저 캐시 삭제 시 초기화될 수 있으니 키를 별도로 잘 보관해 두세요.</p>
+            </div>
+
+            <!-- 모델 선택 or 입력 -->
+            <div class="form-group" id="groupSelectModel">
+              <div class="label-with-val">
+                <label for="selectModel">사용 모델</label>
+                <button type="button" class="btn-mini" id="btnFetchOpenRouterModels" title="현재 제공자의 최신 지원 모델 목록을 실시간 조회">목록 갱신</button>
+              </div>
+              <select id="selectModel" class="form-select"></select>
+            </div>
+
+            <div class="form-group" id="groupInputCustomModel" style="display: none;">
+              <label for="inputCustomModel">모델명 직접 입력</label>
+              <input type="text" id="inputCustomModel" class="form-input" placeholder="예: claude-3-5-sonnet, gpt-4o, llama-3.3-70b">
+            </div>
+
+            <button type="button" class="btn-block btn-primary" id="btnSaveSettings">AI 모델 설정 저장</button>
+          </div>
+        </section>
+
+        <!-- 7. [NovelAI (NAI) 실시간 삽화 설정] (신규) -->
+        <section class="panel-section accordion-section collapsed" id="sectionNai">
+          <div class="section-header accordion-toggle" data-target="naiContent">
+            <h2 class="section-title" id="titleNai">NovelAI (NAI) 삽화 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="naiContent">
+            <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+              <label for="toggleNaiEnabled" style="margin: 0; cursor: pointer;">NAI 삽화 생성 기능 켜기</label>
+              <input type="checkbox" id="toggleNaiEnabled" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-cyan);">
+            </div>
+
+            <div class="form-group">
+              <label for="inputNaiApiKey">NovelAI API Key (Persistent Key)</label>
+              <input type="password" id="inputNaiApiKey" class="form-input" placeholder="pst-... 또는 API 토큰 입력">
+            </div>
+
+            <!-- 삽화 생성 방식 (수동 / 클라이맥스 자동 / N턴마다) -->
+            <div class="form-group">
+              <label for="selectNaiTriggerMode">삽화 생성 발동 방식</label>
+              <select id="selectNaiTriggerMode" class="form-select">
+                <option value="manual" selected>수동 생성 ([🎨 삽화] 버튼 클릭 시에만)</option>
+                <option value="auto_climax">클라이맥스 자동 감지 (중요 장면에 AI가 스스로 생성)</option>
+                <option value="turn_interval">턴 수 주기 자동 생성 (N턴마다 정기 생성)</option>
+              </select>
+            </div>
+
+            <!-- N턴마다 주기 입력창 (상시 노출) -->
+            <div class="form-group" id="groupNaiTurnInterval">
+              <div class="label-with-val">
+                <label for="inputNaiTurnInterval">삽화 생성 주기 설정</label>
+                <span id="turnIntervalDisplay" class="val-badge">5턴 마다 생성</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" id="inputNaiTurnInterval" class="form-input" min="1" max="50" value="5" style="width: 80px; text-align: center; font-weight: bold; color: var(--accent-cyan);">
+                <span style="font-size: 0.85rem; color: var(--text-main);">턴 대화마다 자동 생성</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="selectNaiModel">NAI 확산 모델</label>
+              <select id="selectNaiModel" class="form-select">
+                <option value="nai-diffusion-5-full" selected>NovelAI Diffusion V5 Full (최신 최상위 플래그십)</option>
+                <option value="nai-diffusion-5-curated">NovelAI Diffusion V5 Curated (V5 정제형)</option>
+                <option value="nai-diffusion-4-full">NovelAI Diffusion V4.5 / V4 Full</option>
+                <option value="nai-diffusion-4-curated">NovelAI Diffusion V4.5 / V4 Curated</option>
+                <option value="nai-diffusion-3">NovelAI Diffusion V3 (Anime v3)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="inputNaiPositive">기본 긍정 프롬프트 (품질/화풍 태그)</label>
+              <textarea id="inputNaiPositive" class="form-textarea" rows="2" placeholder="masterpiece, best quality, aesthetic, highly detailed, beautiful lighting, cinematic"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="inputNaiNegative">네거티브 프롬프트 (제외할 요소)</label>
+              <textarea id="inputNaiNegative" class="form-textarea" rows="2" placeholder="lowres, bad anatomy, bad hands, text, error, blurry, worst quality"></textarea>
+            </div>
+
+            <button type="button" class="btn-block btn-primary" id="btnSaveNaiSettings">NAI 삽화 설정 저장</button>
+          </div>
+        </section>
+
+        <!-- 8. [대화 백업 및 복원] -->
+        <section class="panel-section accordion-section collapsed" id="sectionMemoryBackup">
+          <div class="section-header accordion-toggle" data-target="memoryBackupContent">
+            <h2 class="section-title" id="titleBackup">대화 백업 및 내보내기</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="memoryBackupContent">
+            <div class="btn-grid-dual">
+              <button type="button" class="btn-mini btn-primary" id="btnExportChatJson" title="JSON 백업 파일로 저장">대화 백업(저장)</button>
+              <button type="button" class="btn-mini btn-primary" id="btnImportChatJson" title="백업 파일 불러오기">대화 복원(불러오기)</button>
+              <input type="file" id="chatBackupFileInput" accept=".json,.txt" style="display: none;">
+            </div>
+
+            <div class="btn-grid-dual">
+              <button type="button" class="btn-mini" id="btnExportChatTxt" title="소설 형태의 읽기용 TXT 텍스트로 내보내기">텍스트(TXT) 추출</button>
+              <button type="button" class="btn-mini btn-danger" id="btnClearCurrentMemory" title="현재 캐릭터와의 대화 기록 초기화">대화 초기화</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. [문체 설정] -->
+        <section class="panel-section accordion-section collapsed" id="sectionNarrative">
+          <div class="section-header accordion-toggle" data-target="narrativeContent">
+            <h2 class="section-title" id="titleNarrative">문체 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="narrativeContent">
+            <div class="form-group">
+              <label>서술 분량</label>
+              <div class="btn-chip-group" id="lengthChipGroup">
+                <button type="button" class="chip-btn" data-length="short">단문</button>
+                <button type="button" class="chip-btn active" data-length="standard">표준</button>
+                <button type="button" class="chip-btn" data-length="long">장문</button>
+                <button type="button" class="chip-btn" data-length="epic">초장문</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="selectNarrativeStyle">지문 및 대사 비중</label>
+              <select id="selectNarrativeStyle" class="form-select">
+                <option value="balanced" selected>균형형 (지문 50% : 대사 50%)</option>
+                <option value="novel">지문 중심 (지문 70% : 대사 30% / 서사 중심)</option>
+                <option value="talk">대화 중심 (지문 30% : 대사 70% / 티키타카)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <div class="label-with-val">
+                <label for="inputTemperature">창의성 (Temperature)</label>
+                <span id="tempValDisplay" class="val-badge">0.85</span>
+              </div>
+              <input type="range" id="inputTemperature" min="0.2" max="1.3" step="0.05" value="0.85" class="form-range">
+            </div>
+          </div>
+        </section>
+
+        <!-- 10. [대화창 뷰어 설정] (글자 크기 & 줄간격) (신규) -->
+        <section class="panel-section accordion-section collapsed" id="sectionViewerStyle">
+          <div class="section-header accordion-toggle" data-target="viewerStyleContent">
+            <h2 class="section-title" id="titleViewerStyle">대화창 글자 크기 / 뷰어 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="viewerStyleContent">
+            <div class="form-group">
+              <label>글자 크기 (Font Size)</label>
+              <div class="btn-chip-group" id="fontSizeChipGroup">
+                <button type="button" class="chip-btn" data-size="small">작게</button>
+                <button type="button" class="chip-btn active" data-size="medium">보통</button>
+                <button type="button" class="chip-btn" data-size="large">크게</button>
+                <button type="button" class="chip-btn" data-size="xlarge">아주크게</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>줄간격 (Line Height)</label>
+              <div class="btn-chip-group" id="lineHeightChipGroup">
+                <button type="button" class="chip-btn" data-lh="compact">조밀하게</button>
+                <button type="button" class="chip-btn active" data-lh="normal">표준</button>
+                <button type="button" class="chip-btn" data-lh="relaxed">넓게</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11. [사용 가이드 / 기능 안내 / 필수 주의사항] -->
+        <section class="panel-section accordion-section collapsed" id="sectionHelpGuide">
+          <div class="section-header accordion-toggle" data-target="helpGuideContent">
+            <h2 class="section-title" id="titleHelpGuide">📖 가이드 & 주의사항</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="helpGuideContent">
+            
+            <!-- 3단계 시작 가이드 -->
+            <div class="guide-block">
+              <h3 class="guide-subtitle">🚀 3단계 초간단 시작법</h3>
+              <ol class="guide-list-num">
+                <li><strong>API Key 입력</strong>: 위쪽 [AI 모델 설정]에서 Gemini 또는 OpenRouter API 키를 입력합니다. (기기 내부에만 안전 보관)</li>
+                <li><strong>캐릭터 카드 추가</strong>: 소장 중인 Tavern V2 카드(.png / .json)를 화면에 드래그하거나 [카드 추가]를 누릅니다.</li>
+                <li><strong>대화 시작</strong>: 하단 입력창에 지문(*...*)과 대사("...")를 입력하고 전송합니다.</li>
+              </ol>
+            </div>
+
+            <!-- 5대 핵심 기능 -->
+            <div class="guide-block">
+              <h3 class="guide-subtitle">✨ 주요 기능 안내</h3>
+              <ul class="guide-list-bullet">
+                <li><strong>소설형 지문/대사</strong>: 대사는 큰따옴표(""), 지문은 별표(**)로 자동 깔끔 렌더링.</li>
+                <li><strong>은밀한 속마음</strong>: 캐릭터의 히든 속마음(&lt;thought&gt;)은 상단 전용 뷰어에 분리 표시.</li>
+                <li><strong>모바일 퀵 심볼 바</strong>: 키보드 위 원터치 버튼으로 따옴표, 별표, 괄호 즉시 입력.</li>
+                <li><strong>실시간 대화 검색</strong>: 상단 🔍 버튼으로 지난 명장면이나 단어로 즉시 화면 점프.</li>
+                <li><strong>15턴 자동 요약</strong>: 긴 서사도 15턴마다 AI가 3줄 압축하여 장기 기억에 누적.</li>
+                <li><strong>대화 3대 조작</strong>: 답변 재시도는 [🔄 리롤], 오타 수정은 [✏️ 수정], 분기 전환은 [↵ 재전송].</li>
+              </ul>
+            </div>
+
+            <!-- 필수 주의사항 및 면책 -->
+            <div class="guide-block alert-block">
+              <h3 class="guide-subtitle">⚠️ 필수 주의사항 & 면책 고지</h3>
+              <ul class="guide-list-bullet">
+                <li><strong>시크릿 모드 주의</strong>: 시크릿 창(InPrivate)으로 접속 시 창을 닫으면 데이터가 즉시 삭제됩니다. 반드시 일반 창에서 이용하세요.</li>
+                <li><strong>주기적 대화 백업 권장</strong>: 캐시 청소 시 대화가 초기화될 수 있으므로 소중한 기록은 [대화 백업 및 내보내기]에서 JSON 파일로 저장해 두세요.</li>
+                <li><strong>API Key 보관</strong>: 본인의 API 키는 개인 메모장에 별도 보관해 두시는 것을 권장합니다.</li>
+                <li><strong>중립 저작 도구 EULA</strong>: 본 소프트웨어는 순수 중립 롤플레이 뷰어/저작 도구이며 성인물이나 특정 서사가 번들되어 있지 않습니다. 외부 카드 및 생성물의 법적 책임은 이용자에게 있습니다.</li>
+              </ul>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+
+    </aside>
+
+    <!-- [우측 메인 영역: 상단(얼굴/속마음) + 대화창 + 입력창] -->
+    <main class="right-panel">
+      
+      <!-- 상단 헤더: [얼굴] + [속마음] + [NAI 삽화 생성 버튼] + [리셋] -->
+      <header class="chat-header">
+        <div class="header-face-card" id="headerFaceCard">
+          <div class="face-avatar-box">
+            <img id="headerAvatar" src="" alt="캐릭터 얼굴" class="header-avatar-img">
+          </div>
+          <span class="header-face-name" id="headerCharName">Synapse Engine</span>
+        </div>
+
+        <div class="header-thought-container" id="headerThoughtContainer">
+          <div class="thought-box" id="thoughtBox" style="display: none;">
+            <span class="thought-badge">속마음</span>
+            <span class="thought-text" id="thoughtText"></span>
+          </div>
+        </div>
+
+        <!-- 모바일 대화 검색 버튼 -->
+        <button type="button" class="btn-mini btn-search-toggle" id="btnToggleSearch" title="대화 내용 검색">🔍</button>
+        <button type="button" class="btn-mini btn-primary" id="btnTriggerNaiArt" title="현재 장면의 NAI 일러스트 삽화 생성" style="display: none;">🎨 삽화</button>
+        <button type="button" class="btn-mini btn-danger" id="btnResetChat" title="대화 초기화">리셋</button>
+
+        <!-- 상단 헤더 언어 빠른 전환 국기/텍스트 캡슐군 (영/일/중/한) -->
+        <div class="header-lang-flags" id="headerLangFlags">
+          <button type="button" class="btn-flag-mini" data-lang="en" title="English">🇺🇸 EN</button>
+          <button type="button" class="btn-flag-mini" data-lang="ja" title="日本語">🇯🇵 JP</button>
+          <button type="button" class="btn-flag-mini" data-lang="zh" title="中文">🇨🇳 CN</button>
+          <button type="button" class="btn-flag-mini active" data-lang="ko" title="한국어">🇰🇷 KR</button>
+        </div>
+      </header>
+
+      <!-- 모바일 대화 실시간 검색 바 (스마트 검색기) -->
+      <div class="chat-search-bar" id="chatSearchBar" style="display: none;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="inputChatSearch" class="search-input" placeholder="대화 내용 검색... (단어 입력 시 실시간 점프)">
+        <span class="search-count" id="searchCountDisplay">0 / 0</span>
+        <button type="button" class="btn-search-nav" id="btnSearchPrev" title="이전 결과 (위로)">▲</button>
+        <button type="button" class="btn-search-nav" id="btnSearchNext" title="다음 결과 (아래로)">▼</button>
+        <button type="button" class="btn-search-close" id="btnCloseSearch" title="검색 닫기">✕</button>
+      </div>
+
+      <!-- 중앙 대화창 로그 -->
+      <div class="chat-viewport" id="chatLog"></div>
+
+      <!-- 하단 RP 텍스트 입력창 -->
+      <footer class="chat-footer">
+        <!-- 모바일 퀵 심볼 바 (특수문자 원터치 칩) -->
+        <div class="chat-quick-toolbar" id="chatQuickToolbar">
+          <button type="button" class="btn-quick-symbol" data-wrap="quote" title="대사 큰따옴표 &quot;...&quot; 삽입">" 대사 "</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="action" title="행동/지문 별표 *...* 삽입">* 지문 *</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="thought" title="속마음 괄호 (...) 삽입">( 속마음 )</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="wave" title="물결표 ~ 삽입">~</button>
+          <button type="button" class="btn-quick-symbol" data-wrap="clear" title="입력창 전체 지우기">⌫ 지우기</button>
+        </div>
+
+        <div class="input-container">
+          <textarea id="userInput" class="rp-input" placeholder="지문(*...*)과 대사(&quot;...&quot;)를 자유롭게 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)" rows="2"></textarea>
+          <button type="button" class="btn-send" id="btnSend">전송</button>
+        </div>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <!-- 스크립트 연결 -->
+  <script src="dist/rp_engine.js"></script>
+  <script src="dist/ui_controller.js"></script>
+</body>
+</html>
