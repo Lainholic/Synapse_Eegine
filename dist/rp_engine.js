@@ -137,17 +137,34 @@
   // ============================================================================
   // 2. TouchRPEngine 메인 클래스
   // ============================================================================
+  function getInitialLocale() {
+    if (typeof navigator !== 'undefined') {
+      const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+      if (browserLang.startsWith('ko')) return 'ko';
+      if (browserLang.startsWith('zh') || browserLang.startsWith('cn')) return 'zh';
+      if (browserLang.startsWith('ja')) return 'ja';
+    }
+    return 'en';
+  }
+
   class TouchRPEngine {
     constructor() {
       this.db = new TouchRPDB();
       this.characters = new Map();
       this.activeCharId = '';
       this.chatHistory = [];
+      this.outputLanguage = getInitialLocale();
+
+      const defaultUserNames = { ko: '당신', en: 'You', ja: 'あなた', zh: '你' };
+      const defaultPersonaDescs = { ko: '기본 페르소나', en: 'Default Persona', ja: 'デフォルトペルソナ', zh: '默认角色画像' };
+      const defName = defaultUserNames[this.outputLanguage] || 'You';
+      const defDesc = defaultPersonaDescs[this.outputLanguage] || 'Default Persona';
+
       this.userPersonas = [
-        { id: 'default', name: '당신', personaDesc: '기본 페르소나' }
+        { id: 'default', name: defName, personaDesc: defDesc }
       ];
       this.activeUserPersonaId = 'default';
-      this.userName = '당신';
+      this.userName = defName;
       this.userPersona = '';
       this.memoryNotes = [];
       this.apiProvider = 'gemini'; // 'gemini' | 'openrouter' | 'claude' | 'custom'
@@ -190,7 +207,6 @@
       this.temperature = 0.85;
       this.maxTokens = 2048;
       this.customPrompt = '';
-      this.outputLanguage = 'ko';
       this.fontSizePreset = 'medium';
       this.lineHeightPreset = 'normal';
 
@@ -584,13 +600,25 @@ ${fullConversation}
     }
 
     getActiveCharacter() {
-      return this.characters.get(this.activeCharId) || this.characters.values().next().value || {
+      const char = this.characters.get(this.activeCharId) || this.characters.values().next().value;
+      if (char) return char;
+
+      const lang = this.outputLanguage || 'en';
+      const defaults = {
+        ko: { name: '캐릭터', firstMes: '"무슨 생각 하고 있어?"' },
+        en: { name: 'Character', firstMes: '"What are you thinking about?"' },
+        ja: { name: 'キャラクター', firstMes: '「何を考えているの？」' },
+        zh: { name: '角色', firstMes: '“在想什么呢？”' }
+      };
+      const def = defaults[lang] || defaults.en;
+
+      return {
         id: 'default',
-        name: '캐릭터',
+        name: def.name,
         avatar: '',
         personaDesc: '',
         scenarioDesc: '',
-        firstMes: '"무슨 생각 하고 있어?"'
+        firstMes: def.firstMes
       };
     }
 

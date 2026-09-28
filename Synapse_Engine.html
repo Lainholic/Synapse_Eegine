@@ -1548,7 +1548,7 @@ html, body {
           <button type="button" class="btn-flag-mini" data-lang="en" title="English">🇺🇸 EN</button>
           <button type="button" class="btn-flag-mini" data-lang="ja" title="日本語">🇯🇵 JP</button>
           <button type="button" class="btn-flag-mini" data-lang="zh" title="中文">🇨🇳 CN</button>
-          <button type="button" class="btn-flag-mini active" data-lang="ko" title="한국어">🇰🇷 KR</button>
+          <button type="button" class="btn-flag-mini" data-lang="ko" title="한국어">🇰🇷 KR</button>
         </div>
       </header>
 
@@ -1727,17 +1727,34 @@ html, body {
   // ============================================================================
   // 2. TouchRPEngine 메인 클래스
   // ============================================================================
+  function getInitialLocale() {
+    if (typeof navigator !== 'undefined') {
+      const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+      if (browserLang.startsWith('ko')) return 'ko';
+      if (browserLang.startsWith('zh') || browserLang.startsWith('cn')) return 'zh';
+      if (browserLang.startsWith('ja')) return 'ja';
+    }
+    return 'en';
+  }
+
   class TouchRPEngine {
     constructor() {
       this.db = new TouchRPDB();
       this.characters = new Map();
       this.activeCharId = '';
       this.chatHistory = [];
+      this.outputLanguage = getInitialLocale();
+
+      const defaultUserNames = { ko: '당신', en: 'You', ja: 'あなた', zh: '你' };
+      const defaultPersonaDescs = { ko: '기본 페르소나', en: 'Default Persona', ja: 'デフォルトペルソナ', zh: '默认角色画像' };
+      const defName = defaultUserNames[this.outputLanguage] || 'You';
+      const defDesc = defaultPersonaDescs[this.outputLanguage] || 'Default Persona';
+
       this.userPersonas = [
-        { id: 'default', name: '당신', personaDesc: '기본 페르소나' }
+        { id: 'default', name: defName, personaDesc: defDesc }
       ];
       this.activeUserPersonaId = 'default';
-      this.userName = '당신';
+      this.userName = defName;
       this.userPersona = '';
       this.memoryNotes = [];
       this.apiProvider = 'gemini'; // 'gemini' | 'openrouter' | 'claude' | 'custom'
@@ -1780,7 +1797,6 @@ html, body {
       this.temperature = 0.85;
       this.maxTokens = 2048;
       this.customPrompt = '';
-      this.outputLanguage = 'ko';
       this.fontSizePreset = 'medium';
       this.lineHeightPreset = 'normal';
 
@@ -2174,13 +2190,25 @@ ${fullConversation}
     }
 
     getActiveCharacter() {
-      return this.characters.get(this.activeCharId) || this.characters.values().next().value || {
+      const char = this.characters.get(this.activeCharId) || this.characters.values().next().value;
+      if (char) return char;
+
+      const lang = this.outputLanguage || 'en';
+      const defaults = {
+        ko: { name: '캐릭터', firstMes: '"무슨 생각 하고 있어?"' },
+        en: { name: 'Character', firstMes: '"What are you thinking about?"' },
+        ja: { name: 'キャラクター', firstMes: '「何を考えているの？」' },
+        zh: { name: '角色', firstMes: '“在想什么呢？”' }
+      };
+      const def = defaults[lang] || defaults.en;
+
+      return {
         id: 'default',
-        name: '캐릭터',
+        name: def.name,
         avatar: '',
         personaDesc: '',
         scenarioDesc: '',
-        firstMes: '"무슨 생각 하고 있어?"'
+        firstMes: def.firstMes
       };
     }
 
@@ -2884,7 +2912,76 @@ ${fullConversation}
       btnReroll: '🔄 리롤',
       btnEdit: '✏️ 수정',
       btnDelete: '🗑️ 삭제',
-      btnResend: '↵ 재전송'
+      btnResend: '↵ 재전송',
+      // Messages & Notifications
+      msgMemorySaved: '새로운 장기 기억이 등록되었습니다!',
+      msgSummarySaved: '대화가 요약되어 장기 기억에 저장되었습니다!',
+      msgAllMemoryCleared: '모든 장기 기억이 삭제되었습니다.',
+      msgChatCleared: '대화가 초기화되었습니다.',
+      msgCardLoaded: '캐릭터 카드가 로드되었습니다: {name}',
+      msgPersonaSwitched: '페르소나가 전환되었습니다: {name}',
+      msgPersonaAdded: '새 페르소나 슬롯이 추가되었습니다.',
+      msgPersonaSaved: '페르소나가 저장되었습니다.',
+      msgPersonaDeleted: '페르소나가 삭제되었습니다.',
+      msgCharSettingsSaved: '캐릭터 설정이 저장되었습니다.',
+      msgPromptSaved: '프롬프트가 저장되었습니다.',
+      msgLengthChanged: '분량 변경: {value}',
+      msgFontSizeChanged: '글자 크기 변경: {value}',
+      msgLineHeightChanged: '줄간격 변경: {value}',
+      msgRatioChanged: '비중이 변경되었습니다.',
+      msgModelsLoaded: '{provider} 모델 {count}개를 불러왔습니다.',
+      msgApiSettingsSaved: 'AI 모델 설정이 저장되었습니다.',
+      msgNaiSettingsSaved: 'NovelAI 삽화 설정이 저장되었습니다.',
+      msgMemoryDeleted: '기억이 삭제되었습니다.',
+      msgBackupExported: '대화 백업 파일이 저장되었습니다.',
+      msgBackupRestored: '대화 및 기억이 성공적으로 복원되었습니다!',
+      msgTxtExported: '텍스트(TXT) 소설 파일이 저장되었습니다.',
+      msgNaiArtGenerated: '일러스트 삽화가 생성되었습니다!',
+      msgPersonasExported: '페르소나 목록 파일이 저장되었습니다.',
+      msgPersonasImported: '페르소나 목록({count}개)을 성공적으로 불러왔습니다!',
+      msgDialogueEdited: '대사가 수정되었습니다.',
+      msgDialogueDeleted: '대사가 삭제되었습니다.',
+      // Errors & Alerts
+      errEnterMemoryContent: '기억할 내용을 입력하세요.',
+      errSetApiKeyFirst: 'API 키를 먼저 설정해 주세요.',
+      errSummaryFailed: '대화 요약 실패: {err}',
+      errCardLoadFailed: '카드 불러오기 실패: {err}',
+      errMinOnePersona: '최소 1개의 페르소나는 유지되어야 합니다.',
+      errEnterProviderApiKey: '{provider} API 키를 먼저 입력하세요.',
+      errLiveModelFetchNotSupported: '현재 제공자는 실시간 목록 조회를 지원하지 않습니다.',
+      errFetchModelsFailed: '모델 목록 조회 실패: {err}',
+      errUnrecognizedBackup: '대화 기록을 인식할 수 없습니다. 올바른 백업 파일(.json 또는 .txt)인지 확인해 주세요.',
+      errBackupLoadFailed: '백업 파일 로드 오류: {err}',
+      errNaiKeyAndEnable: 'NovelAI 설정에서 API 키를 입력하고 기능을 켜주세요.',
+      errNaiArtFailed: '삽화 생성 오류: {err}',
+      errInvalidPersonaBackup: '올바른 페르소나 백업 파일(.json)이 아닙니다.',
+      errPersonaLoadFailed: '페르소나 파일 로드 오류: {err}',
+      errApiKeyNotSet: 'AI 모델 API 키가 설정되지 않았습니다.',
+      errRegenerationFailed: '재생성 실패: {err}',
+      errEnterApiKeyFirstLeft: 'API 키를 먼저 입력하고 저장해 주세요. (좌측 설정 탭)',
+      errGenerateFailed: '답변 생성 실패 (네트워크/API 오류): {err}\n\n* 작성하신 메시지는 대화창에 안전하게 보존되어 있으니 [수정·재전송] 버튼으로 다시 시도하실 수 있습니다.',
+      // Confirms
+      confirmClearAllMemory: '현재 캐릭터({name})의 모든 장기 기억을 비우시겠습니까?',
+      confirmClearChat: '현재 캐릭터({name})와의 대화 기록을 초기화하시겠습니까?',
+      confirmDeletePersona: '현재 페르소나({name})를 삭제하시겠습니까?',
+      confirmResetChatHeader: '대화 기록을 초기화하시겠습니까? (이전 기억 삭제)',
+      confirmBranchFromTurn: '이 질문/지문으로 돌아가서 답변을 다시 받으시겠습니까? (이후 대화는 새로 생성됩니다)',
+      confirmReroll: '이 답변을 취소하고 새로운 답변을 다시 받으시겠습니까?',
+      confirmDeleteMessage: '이 대사를 삭제하시겠습니까?',
+      // Status & Prompts
+      btnAutoSummary: '✨ 대화 AI 자동요약',
+      txtSummarizing: '요약중...',
+      promptNewPersonaName: '새 페르소나의 이름/호칭을 입력하세요:',
+      defaultNewPersonaName: '새 인물',
+      defaultUserName: '당신',
+      promptNaiTag: '생성할 삽화의 프롬프트(영문 태그)를 입력하세요:',
+      txtThinking: '생각 중...',
+      txtGenerating: '답변을 작성하고 있습니다...',
+      txtRegenerating: '답변을 새로 작성하고 있습니다...',
+      btnSaveOnly: '저장만',
+      btnCancel: '취소',
+      btnEditAndResend: '수정 후 전송 ↵',
+      btnEditSave: '수정 저장'
     },
     en: {
       charSelectTitle: 'Character Selection',
@@ -2955,7 +3052,76 @@ ${fullConversation}
       btnReroll: '🔄 Reroll',
       btnEdit: '✏️ Edit',
       btnDelete: '🗑️ Delete',
-      btnResend: '↵ Resend'
+      btnResend: '↵ Resend',
+      // Messages & Notifications
+      msgMemorySaved: 'New long-term memory saved!',
+      msgSummarySaved: 'Chat summarized and saved to long-term memory!',
+      msgAllMemoryCleared: 'All long-term memories deleted.',
+      msgChatCleared: 'Chat history reset.',
+      msgCardLoaded: 'Character card loaded: {name}',
+      msgPersonaSwitched: 'Persona switched: {name}',
+      msgPersonaAdded: 'New persona slot added.',
+      msgPersonaSaved: 'Persona saved.',
+      msgPersonaDeleted: 'Persona deleted.',
+      msgCharSettingsSaved: 'Character settings saved.',
+      msgPromptSaved: 'Custom prompt saved.',
+      msgLengthChanged: 'Length preset: {value}',
+      msgFontSizeChanged: 'Font size: {value}',
+      msgLineHeightChanged: 'Line height: {value}',
+      msgRatioChanged: 'Ratio preset updated.',
+      msgModelsLoaded: 'Fetched {count} models from {provider}.',
+      msgApiSettingsSaved: 'AI model settings saved.',
+      msgNaiSettingsSaved: 'NovelAI art settings saved.',
+      msgMemoryDeleted: 'Memory note deleted.',
+      msgBackupExported: 'Chat backup file saved.',
+      msgBackupRestored: 'Chat and memories successfully restored!',
+      msgTxtExported: 'Novel text (TXT) file saved.',
+      msgNaiArtGenerated: 'NovelAI illustration generated!',
+      msgPersonasExported: 'Persona list file saved.',
+      msgPersonasImported: 'Successfully loaded {count} persona(s)!',
+      msgDialogueEdited: 'Message updated.',
+      msgDialogueDeleted: 'Message deleted.',
+      // Errors & Alerts
+      errEnterMemoryContent: 'Please enter content to remember.',
+      errSetApiKeyFirst: 'Please configure your API key first.',
+      errSummaryFailed: 'Chat summary failed: {err}',
+      errCardLoadFailed: 'Failed to load card: {err}',
+      errMinOnePersona: 'At least one persona must be kept.',
+      errEnterProviderApiKey: 'Please enter your {provider} API key first.',
+      errLiveModelFetchNotSupported: 'The selected provider does not support live model fetching.',
+      errFetchModelsFailed: 'Failed to fetch models: {err}',
+      errUnrecognizedBackup: 'Unrecognized backup file. Please make sure it is a valid backup (.json or .txt).',
+      errBackupLoadFailed: 'Failed to load backup file: {err}',
+      errNaiKeyAndEnable: 'Please enter your NovelAI API key and enable the feature in settings.',
+      errNaiArtFailed: 'Failed to generate illustration: {err}',
+      errInvalidPersonaBackup: 'Invalid persona backup file (.json).',
+      errPersonaLoadFailed: 'Failed to load persona file: {err}',
+      errApiKeyNotSet: 'AI model API key is not configured.',
+      errRegenerationFailed: 'Regeneration failed: {err}',
+      errEnterApiKeyFirstLeft: 'Please enter and save your API key first in the left settings tab (◀).',
+      errGenerateFailed: 'Failed to generate response (Network/API Error): {err}\n\n* Your message is safely preserved in the chat window. You can retry anytime using the [Resend] button.',
+      // Confirms
+      confirmClearAllMemory: 'Do you want to clear all long-term memories for {name}?',
+      confirmClearChat: 'Do you want to reset the chat history with {name}?',
+      confirmDeletePersona: 'Do you want to delete current persona ({name})?',
+      confirmResetChatHeader: 'Reset chat history? (Previous messages will be cleared)',
+      confirmBranchFromTurn: 'Branch from this message and generate a new response? (Subsequent turns will be rewritten)',
+      confirmReroll: 'Discard this response and generate a new one?',
+      confirmDeleteMessage: 'Delete this message?',
+      // Status & Prompts
+      btnAutoSummary: '✨ AI Auto-Summary',
+      txtSummarizing: 'Summarizing...',
+      promptNewPersonaName: 'Enter persona name / title:',
+      defaultNewPersonaName: 'New Persona',
+      defaultUserName: 'You',
+      promptNaiTag: 'Enter illustration prompt (English tags):',
+      txtThinking: 'Thinking...',
+      txtGenerating: 'Writing response...',
+      txtRegenerating: 'Rewriting response...',
+      btnSaveOnly: 'Save Only',
+      btnCancel: 'Cancel',
+      btnEditAndResend: 'Save & Send ↵',
+      btnEditSave: 'Save Edit'
     },
     ja: {
       charSelectTitle: 'キャラクター選択',
@@ -3026,7 +3192,76 @@ ${fullConversation}
       btnReroll: '🔄 リロール',
       btnEdit: '✏️ 編集',
       btnDelete: '🗑️ 削除',
-      btnResend: '↵ 再送信'
+      btnResend: '↵ 再送信',
+      // Messages & Notifications
+      msgMemorySaved: '新しい長期記憶が登録されました！',
+      msgSummarySaved: '会話が要約され、長期記憶に保存されました！',
+      msgAllMemoryCleared: 'すべての長期記憶が削除されました。',
+      msgChatCleared: '会話履歴がリセットされました。',
+      msgCardLoaded: 'キャラクターカードを読み込みました: {name}',
+      msgPersonaSwitched: 'ペルソナが切り替わりました: {name}',
+      msgPersonaAdded: '新規ペルソナスロットが追加されました。',
+      msgPersonaSaved: 'ペルソナが保存されました。',
+      msgPersonaDeleted: 'ペルソナが削除されました。',
+      msgCharSettingsSaved: 'キャラクター設定が保存されました。',
+      msgPromptSaved: 'カスタムプロンプトが保存されました。',
+      msgLengthChanged: '叙述分量変更: {value}',
+      msgFontSizeChanged: '文字サイズ変更: {value}',
+      msgLineHeightChanged: '行間変更: {value}',
+      msgRatioChanged: '比率が更新されました。',
+      msgModelsLoaded: '{provider}から{count}件のモデルを取得しました。',
+      msgApiSettingsSaved: 'AIモデル設定が保存されました。',
+      msgNaiSettingsSaved: 'NovelAI挿絵設定が保存されました。',
+      msgMemoryDeleted: '記憶が削除されました。',
+      msgBackupExported: '会話バックアップファイルが保存されました。',
+      msgBackupRestored: '会話と記憶が正常に復元されました！',
+      msgTxtExported: '小説テキスト(TXT)ファイルが保存されました。',
+      msgNaiArtGenerated: 'イラスト挿絵が生成されました！',
+      msgPersonasExported: 'ペルソナ一覧ファイルが保存されました。',
+      msgPersonasImported: 'ペルソナ一覧({count}件)を読み込みました！',
+      msgDialogueEdited: 'メッセージが修正されました。',
+      msgDialogueDeleted: 'メッセージが削除されました。',
+      // Errors & Alerts
+      errEnterMemoryContent: '記憶する内容を入力してください。',
+      errSetApiKeyFirst: '先にAPIキーを設定してください。',
+      errSummaryFailed: '会話要約失敗: {err}',
+      errCardLoadFailed: 'カード読み込み失敗: {err}',
+      errMinOnePersona: '少なくとも1つのペルソナを保持する必要があります。',
+      errEnterProviderApiKey: '先に{provider}のAPIキーを入力してください。',
+      errLiveModelFetchNotSupported: '現在のプロバイダーはモデル一覧のリアルタイム取得に対応していません。',
+      errFetchModelsFailed: 'モデル一覧取得失敗: {err}',
+      errUnrecognizedBackup: 'バックアップファイルを認識できません。有効なファイル(.json / .txt)かご確認ください。',
+      errBackupLoadFailed: 'バックアップファイルの読込エラー: {err}',
+      errNaiKeyAndEnable: 'NovelAI設定でAPIキーを入力し、機能を有効にしてください。',
+      errNaiArtFailed: '挿絵生成エラー: {err}',
+      errInvalidPersonaBackup: '有効なペルソナバックアップファイル(.json)ではありません。',
+      errPersonaLoadFailed: 'ペルソナファイル読込エラー: {err}',
+      errApiKeyNotSet: 'AIモデルのAPIキーが設定されていません。',
+      errRegenerationFailed: '再生成失敗: {err}',
+      errEnterApiKeyFirstLeft: '先に左側の設定タブ(◀)でAPIキーを入力して保存してください。',
+      errGenerateFailed: '応答の生成に失敗しました (ネットワーク/APIエラー): {err}\n\n* 入力されたメッセージは会話ログに保持されています。[再送信]ボタンでお試しください。',
+      // Confirms
+      confirmClearAllMemory: '現在のキャラクター({name})のすべての長期記憶を削除しますか？',
+      confirmClearChat: '現在のキャラクター({name})との会話履歴を初期化しますか？',
+      confirmDeletePersona: '現在のペルソナ({name})を削除しますか？',
+      confirmResetChatHeader: '会話履歴を初期化しますか？ (これまでのメッセージが消去されます)',
+      confirmBranchFromTurn: 'このメッセージに戻って新しい応答を生成しますか？ (以降の会話は新しく作成されます)',
+      confirmReroll: 'この応答を取り消して新しく再生成しますか？',
+      confirmDeleteMessage: 'このメッセージを削除しますか？',
+      // Status & Prompts
+      btnAutoSummary: '✨ 会話AI自動要約',
+      txtSummarizing: '要約中...',
+      promptNewPersonaName: '新しいペルソナの名前/呼称を入力してください:',
+      defaultNewPersonaName: '新規ペルソナ',
+      defaultUserName: 'あなた',
+      promptNaiTag: '生成する挿絵のプロンプト(英語タグ)を入力してください:',
+      txtThinking: '思考中...',
+      txtGenerating: '応答を作成しています...',
+      txtRegenerating: '応答を新しく作成しています...',
+      btnSaveOnly: '保存のみ',
+      btnCancel: 'キャンセル',
+      btnEditAndResend: '修正して送信 ↵',
+      btnEditSave: '修正保存'
     },
     zh: {
       charSelectTitle: '选择角色',
@@ -3097,7 +3332,76 @@ ${fullConversation}
       btnReroll: '🔄 重投',
       btnEdit: '✏️ 编辑',
       btnDelete: '🗑️ 删除',
-      btnResend: '↵ 重新发送'
+      btnResend: '↵ 重新发送',
+      // Messages & Notifications
+      msgMemorySaved: '已保存新的长期记忆！',
+      msgSummarySaved: '对话已总结并存入长期记忆！',
+      msgAllMemoryCleared: '所有长期记忆已清空。',
+      msgChatCleared: '对话记录已重置。',
+      msgCardLoaded: '已加载角色卡片: {name}',
+      msgPersonaSwitched: '已切换人设: {name}',
+      msgPersonaAdded: '已添加新的人设槽位。',
+      msgPersonaSaved: '人设已保存。',
+      msgPersonaDeleted: '人设已删除。',
+      msgCharSettingsSaved: '角色设定已保存。',
+      msgPromptSaved: '提示词已保存。',
+      msgLengthChanged: '篇幅变更: {value}',
+      msgFontSizeChanged: '字号变更: {value}',
+      msgLineHeightChanged: '行间距变更: {value}',
+      msgRatioChanged: '比例已更新。',
+      msgModelsLoaded: '已从 {provider} 获取 {count} 个模型。',
+      msgApiSettingsSaved: 'AI模型设置已保存。',
+      msgNaiSettingsSaved: 'NovelAI插画设置已保存。',
+      msgMemoryDeleted: '记忆已删除。',
+      msgBackupExported: '对话备份文件已保存。',
+      msgBackupRestored: '对话与记忆已成功恢复！',
+      msgTxtExported: '小说文本(TXT)文件已保存。',
+      msgNaiArtGenerated: '插画生成成功！',
+      msgPersonasExported: '人设列表文件已保存。',
+      msgPersonasImported: '已成功导入 {count} 个人设！',
+      msgDialogueEdited: '消息已修改。',
+      msgDialogueDeleted: '消息已删除。',
+      // Errors & Alerts
+      errEnterMemoryContent: '请输入需要记忆的内容。',
+      errSetApiKeyFirst: '请先配置API Key。',
+      errSummaryFailed: '对话总结失败: {err}',
+      errCardLoadFailed: '读取角色卡失败: {err}',
+      errMinOnePersona: '必须保留至少一个角色人设。',
+      errEnterProviderApiKey: '请先输入 {provider} 的 API Key。',
+      errLiveModelFetchNotSupported: '当前提供商不支持实时模型列表获取。',
+      errFetchModelsFailed: '获取模型列表失败: {err}',
+      errUnrecognizedBackup: '无法识别备份文件。请确认为有效的备份文件 (.json 或 .txt)。',
+      errBackupLoadFailed: '加载备份文件失败: {err}',
+      errNaiKeyAndEnable: '请在NovelAI设置中输入API Key并启用该功能。',
+      errNaiArtFailed: '生成插画出错: {err}',
+      errInvalidPersonaBackup: '不是有效的角色人设备份文件 (.json)。',
+      errPersonaLoadFailed: '加载人设文件出错: {err}',
+      errApiKeyNotSet: '未配置AI模型 API Key。',
+      errRegenerationFailed: '重新生成失败: {err}',
+      errEnterApiKeyFirstLeft: '请先在左侧设置栏(◀)中输入并保存API Key。',
+      errGenerateFailed: '生成回复失败 (网络/API错误): {err}\n\n* 您的输入内容已妥善保存在对话框中，可随时点击【重新发送】重试。',
+      // Confirms
+      confirmClearAllMemory: '确定要清空当前角色({name})的所有长期记忆吗？',
+      confirmClearChat: '确定要重置与角色({name})的对话记录吗？',
+      confirmDeletePersona: '确定要删除当前人设({name})吗？',
+      confirmResetChatHeader: '确定要重置对话历史吗？(之前的记录将被清除)',
+      confirmBranchFromTurn: '确定从该消息重新分支并获取新回复吗？(后续对话将被覆盖)',
+      confirmReroll: '确定撤销该回复并重新生成新回复吗？',
+      confirmDeleteMessage: '确定删除这条消息吗？',
+      // Status & Prompts
+      btnAutoSummary: '✨ 对话AI自动总结',
+      txtSummarizing: '正在总结...',
+      promptNewPersonaName: '请输入新的人设名称/称呼:',
+      defaultNewPersonaName: '新人设',
+      defaultUserName: '你',
+      promptNaiTag: '请输入插画提示词(英文标签):',
+      txtThinking: '思考中...',
+      txtGenerating: '正在生成回复...',
+      txtRegenerating: '正在重新生成回复...',
+      btnSaveOnly: '仅保存',
+      btnCancel: '取消',
+      btnEditAndResend: '保存并发送 ↵',
+      btnEditSave: '保存修改'
     }
   };
 
@@ -3121,6 +3425,16 @@ ${fullConversation}
       this.currentActiveProvider = null;
       this.searchResults = [];
       this.currentSearchIndex = -1;
+    }
+
+    t(key, params = {}) {
+      const lang = this.engine.outputLanguage || 'en';
+      const dict = I18N_DICT[lang] || I18N_DICT.en || I18N_DICT.ko;
+      let text = dict[key] || (I18N_DICT.en && I18N_DICT.en[key]) || (I18N_DICT.ko && I18N_DICT.ko[key]) || key;
+      for (const [k, v] of Object.entries(params)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      }
+      return text;
     }
 
     async init() {
@@ -3289,13 +3603,13 @@ ${fullConversation}
         this.btnAddMemoryNote.addEventListener('click', () => {
           const text = this.inputNewMemory.value.trim();
           if (!text) {
-            alert('기억할 내용을 입력하세요.');
+            alert(this.t('errEnterMemoryContent'));
             return;
           }
           this.engine.addMemoryNote(text);
           this.inputNewMemory.value = '';
           this.renderMemoryNotesList();
-          this.showToast('새로운 장기 기억이 등록되었습니다!');
+          this.showToast(this.t('msgMemorySaved'));
         });
       }
 
@@ -3303,20 +3617,20 @@ ${fullConversation}
       if (this.btnSummarizeChat) {
         this.btnSummarizeChat.addEventListener('click', async () => {
           if (!this.engine.apiKey) {
-            alert('API 키를 먼저 설정해 주세요.');
+            alert(this.t('errSetApiKeyFirst'));
             return;
           }
           this.btnSummarizeChat.disabled = true;
-          this.btnSummarizeChat.textContent = '요약중...';
+          this.btnSummarizeChat.textContent = this.t('txtSummarizing');
           try {
             const summary = await this.engine.summarizeHistory();
             this.renderMemoryNotesList();
-            this.showToast('대화가 요약되어 장기 기억에 저장되었습니다!');
+            this.showToast(this.t('msgSummarySaved'));
           } catch (err) {
-            alert('대화 요약 실패: ' + err.message);
+            alert(this.t('errSummaryFailed', { err: err.message }));
           } finally {
             this.btnSummarizeChat.disabled = false;
-            this.btnSummarizeChat.textContent = '✨ 대화 AI 자동요약';
+            this.btnSummarizeChat.textContent = this.t('btnAutoSummary');
           }
         });
       }
@@ -3324,11 +3638,11 @@ ${fullConversation}
       // Clear All Long-Term Memory Notes for current character
       if (this.btnClearAllMemoryNotes) {
         this.btnClearAllMemoryNotes.addEventListener('click', () => {
-          if (confirm('현재 캐릭터(' + this.engine.getActiveCharacter().name + ')의 모든 장기 기억을 비우시겠습니까?')) {
+          if (confirm(this.t('confirmClearAllMemory', { name: this.engine.getActiveCharacter().name }))) {
             this.engine.memoryNotes = [];
             this.engine.saveSettings();
             this.renderMemoryNotesList();
-            this.showToast('모든 장기 기억이 삭제되었습니다.');
+            this.showToast(this.t('msgAllMemoryCleared'));
           }
         });
       }
@@ -3351,10 +3665,10 @@ ${fullConversation}
 
       if (this.btnClearCurrentMemory) {
         this.btnClearCurrentMemory.addEventListener('click', () => {
-          if (confirm('현재 캐릭터(' + this.engine.getActiveCharacter().name + ')와의 대화 기록을 초기화하시겠습니까?')) {
+          if (confirm(this.t('confirmClearChat', { name: this.engine.getActiveCharacter().name }))) {
             this.engine.resetChat();
             this.renderChatLog();
-            this.showToast('대화가 초기화되었습니다.');
+            this.showToast(this.t('msgChatCleared'));
           }
         });
       }
@@ -3374,9 +3688,9 @@ ${fullConversation}
             this.updateCharacterUI();
             this.renderMemoryNotesList();
             this.renderChatLog();
-            this.showToast('캐릭터 카드가 로드되었습니다: ' + char.name);
+            this.showToast(this.t('msgCardLoaded', { name: char.name }));
           } catch (err) {
-            alert('카드 불러오기 실패: ' + err.message);
+            alert(this.t('errCardLoadFailed', { err: err.message }));
           }
           this.cardFileInput.value = '';
         });
@@ -3387,19 +3701,19 @@ ${fullConversation}
         this.selectUserPersona.addEventListener('change', (e) => {
           this.engine.selectUserPersona(e.target.value);
           this.loadUserPersonaToUI();
-          this.showToast('페르소나가 전환되었습니다: ' + this.engine.userName);
+          this.showToast(this.t('msgPersonaSwitched', { name: this.engine.userName }));
         });
       }
 
       // Create New User Persona
       if (this.btnCreateNewPersona) {
         this.btnCreateNewPersona.addEventListener('click', () => {
-          const name = prompt('새 페르소나의 이름/호칭을 입력하세요:', '새 인물');
+          const name = prompt(this.t('promptNewPersonaName'), this.t('defaultNewPersonaName'));
           if (name && name.trim()) {
             this.engine.addUserPersona(name.trim(), '');
             this.renderUserPersonaSelector();
             this.loadUserPersonaToUI();
-            this.showToast('새 페르소나 슬롯이 추가되었습니다.');
+            this.showToast(this.t('msgPersonaAdded'));
           }
         });
       }
@@ -3409,12 +3723,13 @@ ${fullConversation}
         this.btnSaveUserPersona.addEventListener('click', () => {
           const p = this.engine.getActiveUserPersona();
           if (p) {
-            p.name = this.inputUserName ? (this.inputUserName.value.trim() || '당신') : '당신';
+            const defUser = this.t('defaultUserName');
+            p.name = this.inputUserName ? (this.inputUserName.value.trim() || defUser) : defUser;
             p.personaDesc = this.inputUserPersona ? this.inputUserPersona.value : '';
             this.engine.syncActivePersona();
             this.engine.saveSettings();
             this.renderUserPersonaSelector();
-            this.showToast('페르소나가 저장되었습니다.');
+            this.showToast(this.t('msgPersonaSaved'));
           }
         });
       }
@@ -3423,14 +3738,14 @@ ${fullConversation}
       if (this.btnDeleteUserPersona) {
         this.btnDeleteUserPersona.addEventListener('click', () => {
           if (this.engine.userPersonas.length <= 1) {
-            alert('최소 1개의 페르소나는 유지되어야 합니다.');
+            alert(this.t('errMinOnePersona'));
             return;
           }
-          if (confirm('현재 페르소나(' + this.engine.userName + ')를 삭제하시겠습니까?')) {
+          if (confirm(this.t('confirmDeletePersona', { name: this.engine.userName }))) {
             this.engine.deleteUserPersona(this.engine.activeUserPersonaId);
             this.renderUserPersonaSelector();
             this.loadUserPersonaToUI();
-            this.showToast('페르소나가 삭제되었습니다.');
+            this.showToast(this.t('msgPersonaDeleted'));
           }
         });
       }
@@ -3451,7 +3766,7 @@ ${fullConversation}
           const sDesc = this.editScenarioDesc ? this.editScenarioDesc.value : '';
           this.engine.saveActiveCharacterPersona(pDesc, sDesc);
           this.engine.saveSettings();
-          this.showToast('캐릭터 설정이 저장되었습니다.');
+          this.showToast(this.t('msgCharSettingsSaved'));
         });
       }
 
@@ -3462,7 +3777,7 @@ ${fullConversation}
             this.engine.customPrompt = this.editCustomPrompt.value;
           }
           this.engine.saveSettings();
-          this.showToast('프롬프트가 저장되었습니다.');
+          this.showToast(this.t('msgPromptSaved'));
         });
       }
 
@@ -3470,7 +3785,7 @@ ${fullConversation}
       if (this.langChips) {
         this.langChips.forEach(chip => {
           chip.addEventListener('click', () => {
-            const lang = chip.getAttribute('data-lang') || 'ko';
+            const lang = chip.getAttribute('data-lang') || 'en';
             this.engine.outputLanguage = lang;
             this.engine.saveSettings();
             this.applyI18nToUI();
@@ -3480,6 +3795,29 @@ ${fullConversation}
               if (c.getAttribute('data-lang') === lang) c.classList.add('active');
               else c.classList.remove('active');
             });
+
+            // 카드가 등록되지 않은 기본 더미 상태일 경우 캐릭터명 및 인사말 언어 실시간 동기화
+            if (this.engine.characters.size === 0) {
+              this.updateCharacterUI();
+              if (this.engine.chatHistory.length === 1 && this.engine.chatHistory[0].role === 'assistant') {
+                const char = this.engine.getActiveCharacter();
+                this.engine.chatHistory[0].content = char.firstMes;
+                this.renderChatLog();
+              }
+            }
+
+            // 기본 페르소나만 있는 경우 유저명 언어 동기화
+            const defaultUserNames = ['당신', 'You', 'あなた', '你'];
+            if (this.engine.userPersonas.length === 1 && defaultUserNames.includes(this.engine.userPersonas[0].name)) {
+              const nameMap = { ko: '당신', en: 'You', ja: 'あなた', zh: '你' };
+              const descMap = { ko: '기본 페르소나', en: 'Default Persona', ja: 'デフォルトペルソナ', zh: '默认角色画像' };
+              const newName = nameMap[lang] || 'You';
+              const newDesc = descMap[lang] || 'Default Persona';
+              this.engine.userPersonas[0].name = newName;
+              this.engine.userPersonas[0].personaDesc = newDesc;
+              this.engine.userName = newName;
+              this.loadUserPersonaToUI();
+            }
 
             const langLabels = {
               ko: '언어: 한국어',
@@ -3501,7 +3839,7 @@ ${fullConversation}
             const len = chip.getAttribute('data-length');
             this.engine.lengthPreset = len;
             this.engine.saveSettings();
-            this.showToast('분량 변경: ' + chip.textContent);
+            this.showToast(this.t('msgLengthChanged', { value: chip.textContent }));
           });
         });
       }
@@ -3515,9 +3853,9 @@ ${fullConversation}
             const sz = chip.getAttribute('data-size');
             this.engine.fontSizePreset = sz;
             this.applyViewerStyleToChat();
-      this.applyI18nToUI();
+            this.applyI18nToUI();
             this.engine.saveSettings();
-            this.showToast('글자 크기 변경: ' + chip.textContent);
+            this.showToast(this.t('msgFontSizeChanged', { value: chip.textContent }));
           });
         });
       }
@@ -3531,9 +3869,9 @@ ${fullConversation}
             const lh = chip.getAttribute('data-lh');
             this.engine.lineHeightPreset = lh;
             this.applyViewerStyleToChat();
-      this.applyI18nToUI();
+            this.applyI18nToUI();
             this.engine.saveSettings();
-            this.showToast('줄간격 변경: ' + chip.textContent);
+            this.showToast(this.t('msgLineHeightChanged', { value: chip.textContent }));
           });
         });
       }
@@ -3543,7 +3881,7 @@ ${fullConversation}
         this.selectNarrativeStyle.addEventListener('change', (e) => {
           this.engine.narrativeStyle = e.target.value;
           this.engine.saveSettings();
-          this.showToast('비중이 변경되었습니다.');
+          this.showToast(this.t('msgRatioChanged'));
         });
       }
 
@@ -3570,10 +3908,11 @@ ${fullConversation}
           const key = this.inputApiKey ? this.inputApiKey.value.trim() : '';
           const provider = this.selectProvider ? this.selectProvider.value : 'gemini';
           if (!key) {
-            alert((provider === 'gemini' ? 'Google Gemini' : 'OpenRouter') + ' API 키를 먼저 입력하세요.');
+            const pName = provider === 'gemini' ? 'Google Gemini' : (provider === 'claude' ? 'Anthropic Claude' : 'OpenRouter');
+            alert(this.t('errEnterProviderApiKey', { provider: pName }));
             return;
           }
-          this.btnFetchOpenRouterModels.textContent = '조회중...';
+          this.btnFetchOpenRouterModels.textContent = this.t('txtThinking') || '...';
           try {
             let models = [];
             if (provider === 'gemini') {
@@ -3581,7 +3920,7 @@ ${fullConversation}
             } else if (provider === 'openrouter') {
               models = await this.engine.fetchOpenRouterModels(key);
             } else {
-              alert('현재 제공자는 실시간 목록 조회를 지원하지 않습니다.');
+              alert(this.t('errLiveModelFetchNotSupported'));
               return;
             }
 
@@ -3593,12 +3932,12 @@ ${fullConversation}
                 opt.textContent = m.name;
                 this.selectModel.appendChild(opt);
               });
-              this.showToast((provider === 'gemini' ? 'Gemini' : '오픈라우터') + ' 모델 ' + models.length + '개를 불러왔습니다.');
+              this.showToast(this.t('msgModelsLoaded', { provider: (provider === 'gemini' ? 'Gemini' : 'OpenRouter'), count: models.length }));
             }
           } catch (err) {
-            alert('모델 목록 조회 실패: ' + err.message);
+            alert(this.t('errFetchModelsFailed', { err: err.message }));
           } finally {
-            this.btnFetchOpenRouterModels.textContent = '목록 갱신';
+            this.btnFetchOpenRouterModels.textContent = this.t('btnRefreshModels') || '목록 갱신';
           }
         });
       }
@@ -3624,7 +3963,7 @@ ${fullConversation}
             this.engine.providerModels[provider] = selectedModel;
           }
           this.engine.saveSettings();
-          this.showToast('AI 모델 설정이 저장되었습니다.');
+          this.showToast(this.t('msgApiSettingsSaved'));
         });
       }
 
@@ -3669,7 +4008,7 @@ ${fullConversation}
           const val = parseInt(e.target.value, 10) || 5;
           this.engine.naiTurnInterval = val;
           if (this.turnIntervalDisplay) {
-            this.turnIntervalDisplay.textContent = val + '턴 마다 생성';
+            this.turnIntervalDisplay.textContent = val + ' ' + this.t('naiTurnSuffix');
           }
           this.engine.saveSettings();
         });
@@ -3687,7 +4026,7 @@ ${fullConversation}
           this.engine.naiNegativePrompt = this.inputNaiNegative ? this.inputNaiNegative.value.trim() : '';
           this.engine.saveSettings();
           this.updateNaiButtonVisibility();
-          this.showToast('NovelAI 삽화 설정이 저장되었습니다.');
+          this.showToast(this.t('msgNaiSettingsSaved'));
         });
       }
 
@@ -3699,10 +4038,10 @@ ${fullConversation}
       // Reset Chat
       if (this.btnResetChat) {
         this.btnResetChat.addEventListener('click', () => {
-          if (confirm('대화 기록을 초기화하시겠습니까? (이전 기억 삭제)')) {
+          if (confirm(this.t('confirmResetChatHeader'))) {
             this.engine.resetChat();
             this.renderChatLog();
-            this.showToast('대화가 초기화되었습니다.');
+            this.showToast(this.t('msgChatCleared'));
           }
         });
       }
@@ -3725,7 +4064,7 @@ ${fullConversation}
       const notes = this.engine.memoryNotes || [];
 
       if (notes.length === 0) {
-        this.memoryNotesList.innerHTML = '<div class="empty-note-hint">등록된 장기 기억이 없습니다.</div>';
+        this.memoryNotesList.innerHTML = '<div class="empty-note-hint">' + this.t('emptyMemoryHint') + '</div>';
         return;
       }
 
@@ -3745,7 +4084,7 @@ ${fullConversation}
         btnDel.addEventListener('click', () => {
           this.engine.deleteMemoryNote(note.id);
           this.renderMemoryNotesList();
-          this.showToast('기억이 삭제되었습니다.');
+          this.showToast(this.t('msgMemoryDeleted'));
         });
 
         item.appendChild(textSpan);
@@ -3774,7 +4113,7 @@ ${fullConversation}
       a.download = '대화백업_' + char.name + '_' + new Date().toISOString().slice(0, 10) + '.json';
       a.click();
       URL.revokeObjectURL(url);
-      this.showToast('대화 백업 파일이 저장되었습니다.');
+      this.showToast(this.t('msgBackupExported'));
     }
 
     async importChatFromJson(e) {
@@ -3830,23 +4169,23 @@ ${fullConversation}
           this.loadSettingsToUI();
           this.renderMemoryNotesList();
           this.renderChatLog();
-          this.showToast('대화 및 기억이 성공적으로 복원되었습니다!');
+          this.showToast(this.t('msgBackupRestored'));
         } else {
-          alert('대화 기록을 인식할 수 없습니다. 올바른 백업 파일(.json 또는 .txt)인지 확인해 주세요.');
+          alert(this.t('errUnrecognizedBackup'));
         }
       } catch (err) {
-        alert('백업 파일 로드 오류: ' + err.message);
+        alert(this.t('errBackupLoadFailed', { err: err.message }));
       }
       this.chatBackupFileInput.value = '';
     }
 
     exportChatAsTxt() {
       const char = this.engine.getActiveCharacter();
-      let txt = '=== ' + char.name + ' & ' + this.engine.userName + ' 롤플레이 기록 ===\n\n';
+      let txt = '=== ' + char.name + ' & ' + this.engine.userName + ' ===\n\n';
       this.engine.chatHistory.forEach(msg => {
         const sender = msg.role === 'assistant' ? char.name : this.engine.userName;
         if (msg.thought) {
-          txt += '[' + sender + ' 속마음]: ' + msg.thought + '\n';
+          txt += '[' + sender + ' ' + (this.t('thoughtBadge') || 'Thought') + ']: ' + msg.thought + '\n';
         }
         txt += sender + ':\n' + msg.content + '\n\n';
         txt += '--------------------------------------------------\n\n';
@@ -3856,10 +4195,10 @@ ${fullConversation}
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '소설_대화록_' + char.name + '_' + new Date().toISOString().slice(0, 10) + '.txt';
+      a.download = 'chat_' + char.name + '_' + new Date().toISOString().slice(0, 10) + '.txt';
       a.click();
       URL.revokeObjectURL(url);
-      this.showToast('텍스트(TXT) 소설 파일이 저장되었습니다.');
+      this.showToast(this.t('msgTxtExported'));
     }
 
     toggleSidebar() {
@@ -4099,31 +4438,31 @@ ${fullConversation}
 
     async handleGenerateNaiArt() {
       if (!this.engine.naiEnabled || !this.engine.naiApiKey) {
-        alert('NovelAI 설정에서 API 키를 입력하고 기능을 켜주세요.');
+        alert(this.t('errNaiKeyAndEnable'));
         return;
       }
 
       const char = this.engine.getActiveCharacter();
-      const prompt = prompt('생성할 삽화의 프롬프트(영문 태그)를 입력하세요:', '1boy, ' + (char.name || 'character') + ', solo, upper body, cinematic lighting, looking at viewer');
+      const prompt = window.prompt(this.t('promptNaiTag'), '1boy, ' + (char.name || 'character') + ', solo, upper body, cinematic lighting, looking at viewer');
       if (!prompt) return;
 
       this.btnTriggerNaiArt.disabled = true;
-      this.btnTriggerNaiArt.textContent = '그리는중...';
+      this.btnTriggerNaiArt.textContent = '...';
       try {
         const imgUrl = await this.engine.generateNaiIllustration(prompt);
         if (imgUrl) {
           // 채팅창에 삽화 메시지 추가
           this.engine.chatHistory.push({
             role: 'assistant',
-            content: '🎨 *[NovelAI 실시간 일러스트 삽화 생성 완료]*\n<img src="' + imgUrl + '" class="nai-bubble-img">',
+            content: '🎨 *[NovelAI]*\n<img src="' + imgUrl + '" class="nai-bubble-img">',
             thought: ''
           });
           this.engine.saveSettings();
           this.renderChatLog();
-          this.showToast('일러스트 삽화가 생성되었습니다!');
+          this.showToast(this.t('msgNaiArtGenerated'));
         }
       } catch (err) {
-        alert('삽화 생성 오류: ' + err.message);
+        alert(this.t('errNaiArtFailed', { err: err.message }));
       } finally {
         this.btnTriggerNaiArt.disabled = false;
         this.btnTriggerNaiArt.textContent = '🎨 삽화';
@@ -4203,6 +4542,11 @@ ${fullConversation}
       setAttr('userInput', 'placeholder', d.inputPlaceholder);
       setAttr('inputNewMemory', 'placeholder', d.memoryInputPlaceholder);
       setAttr('inputChatSearch', 'placeholder', d.searchPlaceholder);
+
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = lang;
+      }
+      this.updateCharacterUI();
     }
 
 
@@ -4231,7 +4575,7 @@ ${fullConversation}
         }
       }
       if (this.inputNaiTurnInterval) this.inputNaiTurnInterval.value = this.engine.naiTurnInterval || 5;
-      if (this.turnIntervalDisplay) this.turnIntervalDisplay.textContent = (this.engine.naiTurnInterval || 5) + '턴 마다';
+      if (this.turnIntervalDisplay) this.turnIntervalDisplay.textContent = (this.engine.naiTurnInterval || 5) + ' ' + this.t('naiTurnSuffix');
       if (this.selectNaiModel) this.selectNaiModel.value = this.engine.naiModel || 'nai-diffusion-5-full';
       if (this.inputNaiPositive) this.inputNaiPositive.value = this.engine.naiPositivePrompt || 'masterpiece, best quality, aesthetic, highly detailed, beautiful lighting, cinematic composition';
       if (this.inputNaiNegative) this.inputNaiNegative.value = this.engine.naiNegativePrompt || 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry';
@@ -4308,10 +4652,10 @@ ${fullConversation}
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '내_페르소나목록_' + new Date().toISOString().slice(0, 10) + '.json';
+      a.download = 'personas_' + new Date().toISOString().slice(0, 10) + '.json';
       a.click();
       URL.revokeObjectURL(url);
-      this.showToast('페르소나 목록 파일이 저장되었습니다.');
+      this.showToast(this.t('msgPersonasExported'));
     }
 
     async importUserPersonasJson(e) {
@@ -4327,12 +4671,12 @@ ${fullConversation}
           this.engine.saveSettings();
           this.renderUserPersonaSelector();
           this.loadUserPersonaToUI();
-          this.showToast('페르소나 목록(' + data.userPersonas.length + '개)을 성공적으로 불러왔습니다!');
+          this.showToast(this.t('msgPersonasImported', { count: data.userPersonas.length }));
         } else {
-          alert('올바른 페르소나 백업 파일(.json)이 아닙니다.');
+          alert(this.t('errInvalidPersonaBackup'));
         }
       } catch (err) {
-        alert('페르소나 파일 로드 오류: ' + err.message);
+        alert(this.t('errPersonaLoadFailed', { err: err.message }));
       }
       if (this.personaFileInput) this.personaFileInput.value = '';
     }
@@ -4512,21 +4856,21 @@ ${fullConversation}
           const btnSave = document.createElement('button');
           btnSave.type = 'button';
           btnSave.className = 'btn-mini';
-          btnSave.textContent = '저장만';
-          btnSave.title = '내용만 수정하여 저장';
+          btnSave.textContent = this.t('btnSaveOnly');
+          btnSave.title = this.t('titleSaveOnly');
           btnSave.addEventListener('click', () => {
             msg.content = textarea.value.trim();
             this.editingIndex = -1;
             this.engine.saveSettings();
             this.renderChatLog();
-            this.showToast('대사가 수정되었습니다.');
+            this.showToast(this.t('msgDialogueEdited'));
           });
 
           const btnSaveAndResend = document.createElement('button');
           btnSaveAndResend.type = 'button';
           btnSaveAndResend.className = 'btn-mini btn-primary';
-          btnSaveAndResend.textContent = msg.role === 'user' ? '수정 후 전송 ↵' : '수정 저장';
-          btnSaveAndResend.title = '수정한 내용으로 이어서 답변 다시 받기';
+          btnSaveAndResend.textContent = msg.role === 'user' ? this.t('btnEditAndResend') : this.t('btnEditSave');
+          btnSaveAndResend.title = this.t('titleEditAndResend');
           btnSaveAndResend.addEventListener('click', () => {
             msg.content = textarea.value.trim();
             this.editingIndex = -1;
@@ -4537,14 +4881,14 @@ ${fullConversation}
             } else {
               this.engine.saveSettings();
               this.renderChatLog();
-              this.showToast('대사가 수정되었습니다.');
+              this.showToast(this.t('msgDialogueEdited'));
             }
           });
 
           const btnCancel = document.createElement('button');
           btnCancel.type = 'button';
           btnCancel.className = 'btn-mini';
-          btnCancel.textContent = '취소';
+          btnCancel.textContent = this.t('btnCancel');
           btnCancel.addEventListener('click', () => {
             this.editingIndex = -1;
             this.renderChatLog();
@@ -4589,13 +4933,13 @@ ${fullConversation}
       if (!msg) return;
 
       if (msg.role === 'user') {
-        if (confirm('이 질문/지문으로 돌아가서 답변을 다시 받으시겠습니까? (이후 대화는 새로 생성됩니다)')) {
+        if (confirm(this.t('confirmBranchFromTurn'))) {
           this.engine.chatHistory = this.engine.chatHistory.slice(0, idx + 1);
           this.engine.saveSettings();
           await this.triggerAiResponseAfterEdit();
         }
       } else {
-        if (confirm('이 답변을 취소하고 새로운 답변을 다시 받으시겠습니까?')) {
+        if (confirm(this.t('confirmReroll'))) {
           this.engine.chatHistory = this.engine.chatHistory.slice(0, idx);
           this.engine.saveSettings();
           await this.triggerAiResponseAfterEdit();
@@ -4605,17 +4949,17 @@ ${fullConversation}
 
     async triggerAiResponseAfterEdit() {
       if (!this.engine.apiKey) {
-        alert('AI 모델 API 키가 설정되지 않았습니다.');
+        alert(this.t('errApiKeyNotSet'));
         return;
       }
 
       this.btnSend.disabled = true;
-      this.btnSend.textContent = '생각 중...';
+      this.btnSend.textContent = this.t('txtThinking');
       this.renderChatLog();
 
       const loadingBubble = document.createElement('div');
       loadingBubble.className = 'chat-bubble assistant-msg loading-bubble';
-      loadingBubble.innerHTML = '<div class="msg-sender">' + this.engine.getActiveCharacter().name + '</div><div class="msg-content"><span class="spinner">✦</span> 답변을 새로 작성하고 있습니다...</div>';
+      loadingBubble.innerHTML = '<div class="msg-sender">' + this.engine.getActiveCharacter().name + '</div><div class="msg-content"><span class="spinner">✦</span> ' + this.t('txtRegenerating') + '</div>';
       this.chatLog.appendChild(loadingBubble);
       this.chatLog.scrollTop = this.chatLog.scrollHeight;
 
@@ -4624,11 +4968,11 @@ ${fullConversation}
         this.renderChatLog();
         this.updateMemoryInfoText();
       } catch (err) {
-        alert('재생성 실패: ' + err.message);
+        alert(this.t('errRegenerationFailed', { err: err.message }));
         this.renderChatLog();
       } finally {
         this.btnSend.disabled = false;
-        this.btnSend.textContent = '전송';
+        this.btnSend.textContent = this.t('btnSend');
       }
     }
 
@@ -4638,12 +4982,12 @@ ${fullConversation}
     }
 
     deleteMessage(index) {
-      if (confirm('이 대사를 삭제하시겠습니까?')) {
+      if (confirm(this.t('confirmDeleteMessage'))) {
         this.engine.chatHistory.splice(index, 1);
         this.editingIndex = -1;
         this.engine.saveSettings();
         this.renderChatLog();
-        this.showToast('대사가 삭제되었습니다.');
+        this.showToast(this.t('msgDialogueDeleted'));
       }
     }
 
@@ -4667,7 +5011,7 @@ ${fullConversation}
       if (!text) return;
 
       if (!this.engine.apiKey) {
-        alert('API 키를 먼저 입력하고 저장해 주세요. (좌측 설정 탭)');
+        alert(this.t('errEnterApiKeyFirstLeft'));
         if (this.leftPanel) this.leftPanel.classList.add('open');
         const apiSec = document.getElementById('sectionApi');
         if (apiSec) apiSec.classList.remove('collapsed');
@@ -4677,7 +5021,7 @@ ${fullConversation}
       // 입력창 비우고 유저 메시지를 대화 기록에 먼저 안전하게 보존!
       this.userInput.value = '';
       this.btnSend.disabled = true;
-      this.btnSend.textContent = '생각 중...';
+      this.btnSend.textContent = this.t('txtThinking');
 
       // 1. 유저 메시지를 히스토리에 먼저 영구 추가 및 저장 (절대 사라지지 않음)
       this.engine.chatHistory.push({
@@ -4690,7 +5034,7 @@ ${fullConversation}
       // 2. 로딩 말풍선 표시
       const loadingBubble = document.createElement('div');
       loadingBubble.className = 'chat-bubble assistant-msg loading-bubble';
-      loadingBubble.innerHTML = '<div class="msg-sender">' + this.engine.getActiveCharacter().name + '</div><div class="msg-content"><span class="spinner">✦</span> 답변을 작성하고 있습니다...</div>';
+      loadingBubble.innerHTML = '<div class="msg-sender">' + this.engine.getActiveCharacter().name + '</div><div class="msg-content"><span class="spinner">✦</span> ' + this.t('txtGenerating') + '</div>';
       this.chatLog.appendChild(loadingBubble);
       this.chatLog.scrollTop = this.chatLog.scrollHeight;
 
@@ -4701,12 +5045,12 @@ ${fullConversation}
         this.updateMemoryInfoText();
       } catch (err) {
         // [중요]: 오류가 나도 유저 메시지는 절대로 삭제(pop)하지 않고 대화창에 그대로 남김!
-        alert('답변 생성 실패 (네트워크/API 오류): ' + err.message + '\n\n* 작성하신 메시지는 대화창에 안전하게 보존되어 있으니 [수정·재전송] 버튼으로 다시 시도하실 수 있습니다.');
+        alert(this.t('errGenerateFailed', { err: err.message }));
         this.renderChatLog();
         this.updateMemoryInfoText();
       } finally {
         this.btnSend.disabled = false;
-        this.btnSend.textContent = '전송';
+        this.btnSend.textContent = this.t('btnSend');
       }
     }
 
