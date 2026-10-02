@@ -52,6 +52,25 @@
           </div>
         </section>
 
+        <!-- [신규 복원] 1-2. 캐릭터 설정 (성격 / 시나리오 수정) -->
+        <section class="panel-section accordion-section collapsed" id="sectionCharSettings">
+          <div class="section-header accordion-toggle" data-target="charSettingsContent">
+            <h2 class="section-title" id="titleCharSettings">캐릭터 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="charSettingsContent">
+            <div class="form-group">
+              <label for="editPersonaDesc" id="labelCharPersona">캐릭터 성격 / 프로필</label>
+              <textarea id="editPersonaDesc" class="form-textarea" rows="4" placeholder="캐릭터의 성격, 외형, 말투 지침"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="editScenarioDesc" id="labelCharScenario">상황 / 배경 시나리오</label>
+              <textarea id="editScenarioDesc" class="form-textarea" rows="3" placeholder="대화가 시작되는 배경과 현재 상황"></textarea>
+            </div>
+            <button type="button" class="btn-block btn-primary" id="btnSaveCharSettings">캐릭터 설정 저장</button>
+          </div>
+        </section>
+
         <!-- 2. [내 페르소나 관리] -->
         <section class="panel-section accordion-section" id="sectionUserPersona">
           <div class="section-header accordion-toggle" data-target="userPersonaContent">

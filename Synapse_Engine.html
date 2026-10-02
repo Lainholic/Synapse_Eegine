@@ -1182,6 +1182,25 @@ html, body {
           </div>
         </section>
 
+        <!-- [신규 복원] 1-2. 캐릭터 설정 (성격 / 시나리오 수정) -->
+        <section class="panel-section accordion-section collapsed" id="sectionCharSettings">
+          <div class="section-header accordion-toggle" data-target="charSettingsContent">
+            <h2 class="section-title" id="titleCharSettings">캐릭터 설정</h2>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="accordion-content" id="charSettingsContent">
+            <div class="form-group">
+              <label for="editPersonaDesc" id="labelCharPersona">캐릭터 성격 / 프로필</label>
+              <textarea id="editPersonaDesc" class="form-textarea" rows="4" placeholder="캐릭터의 성격, 외형, 말투 지침"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="editScenarioDesc" id="labelCharScenario">상황 / 배경 시나리오</label>
+              <textarea id="editScenarioDesc" class="form-textarea" rows="3" placeholder="대화가 시작되는 배경과 현재 상황"></textarea>
+            </div>
+            <button type="button" class="btn-block btn-primary" id="btnSaveCharSettings">캐릭터 설정 저장</button>
+          </div>
+        </section>
+
         <!-- 2. [내 페르소나 관리] -->
         <section class="panel-section accordion-section" id="sectionUserPersona">
           <div class="section-header accordion-toggle" data-target="userPersonaContent">
@@ -4055,6 +4074,15 @@ ${fullConversation}
             this.handleSendMessage();
           }
         });
+
+        // 모바일 가상 키보드 대응: 포커스 시 최하단 스크롤 자동 보정
+        if (this.userInput && this.chatLog) {
+          this.userInput.addEventListener('focus', () => {
+            setTimeout(() => {
+              this.chatLog.scrollTop = this.chatLog.scrollHeight;
+            }, 250);
+          });
+        }
       }
     }
 
@@ -4512,6 +4540,8 @@ ${fullConversation}
       setT('btnAddMemoryNote', d.btnAddMemory);
       setT('btnClearAllMemoryNotes', d.btnClearAllMemory);
       setT('btnSaveCharSettings', d.btnSaveCharSettings);
+      setT('labelCharPersona', d.charPersonaLabel);
+      setT('labelCharScenario', d.charScenarioLabel);
       setT('btnSavePrompt', d.btnSavePrompt);
       setT('btnFetchOpenRouterModels', d.btnRefreshModels);
       setT('btnSaveSettings', d.btnSaveApi);
@@ -5051,6 +5081,17 @@ ${fullConversation}
       } finally {
         this.btnSend.disabled = false;
         this.btnSend.textContent = this.t('btnSend');
+      }
+    }
+
+    // 미정의 호출 방지 및 상태 동기화 메서드
+    updateMemoryInfoText() {
+      // 대화 기록 수 및 메모리 상태 카운트 (필요 시 메모리 패널 수치 갱신)
+      const turnCount = this.engine.chatHistory ? this.engine.chatHistory.length : 0;
+      const memCount = this.engine.memoryNotes ? this.engine.memoryNotes.length : 0;
+      const memInfoEl = document.querySelector('.memory-info-text');
+      if (memInfoEl) {
+        memInfoEl.textContent = `대화: ${turnCount}턴 | 장기 기억: ${memCount}개`;
       }
     }
 

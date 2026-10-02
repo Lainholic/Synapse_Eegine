@@ -1211,6 +1211,15 @@
             this.handleSendMessage();
           }
         });
+
+        // 모바일 가상 키보드 대응: 포커스 시 최하단 스크롤 자동 보정
+        if (this.userInput && this.chatLog) {
+          this.userInput.addEventListener('focus', () => {
+            setTimeout(() => {
+              this.chatLog.scrollTop = this.chatLog.scrollHeight;
+            }, 250);
+          });
+        }
       }
     }
 
@@ -1668,6 +1677,8 @@
       setT('btnAddMemoryNote', d.btnAddMemory);
       setT('btnClearAllMemoryNotes', d.btnClearAllMemory);
       setT('btnSaveCharSettings', d.btnSaveCharSettings);
+      setT('labelCharPersona', d.charPersonaLabel);
+      setT('labelCharScenario', d.charScenarioLabel);
       setT('btnSavePrompt', d.btnSavePrompt);
       setT('btnFetchOpenRouterModels', d.btnRefreshModels);
       setT('btnSaveSettings', d.btnSaveApi);
@@ -2207,6 +2218,17 @@
       } finally {
         this.btnSend.disabled = false;
         this.btnSend.textContent = this.t('btnSend');
+      }
+    }
+
+    // 미정의 호출 방지 및 상태 동기화 메서드
+    updateMemoryInfoText() {
+      // 대화 기록 수 및 메모리 상태 카운트 (필요 시 메모리 패널 수치 갱신)
+      const turnCount = this.engine.chatHistory ? this.engine.chatHistory.length : 0;
+      const memCount = this.engine.memoryNotes ? this.engine.memoryNotes.length : 0;
+      const memInfoEl = document.querySelector('.memory-info-text');
+      if (memInfoEl) {
+        memInfoEl.textContent = `대화: ${turnCount}턴 | 장기 기억: ${memCount}개`;
       }
     }
 
