@@ -50,7 +50,7 @@
 
 ### 🚀 Quick Start
 1. **Live Web Demo or Download**:
-   - 🌐 **[Launch Live Web Demo](https://lainholic.github.io/Synapse_Eegine/)** directly on your mobile/tablet/PC browser.
+   - 🌐 **[Launch Live Web Demo](https://lainholic.github.io/Synapse_Engine/)** directly on your mobile/tablet/PC browser.
    - Or download `Synapse_Engine.html` from Releases and double-click to open.
 2. **Enter API Key**:
    - Open the left drawer menu (◀) ➔ **AI Model Settings** ➔ Enter your free [Google Gemini API Key](https://aistudio.google.com/app/apikey) or OpenRouter Key.
@@ -96,7 +96,7 @@
 ### 🚀 빠른 시작 가이드 (초간단 3단계)
 
 1. **스마트폰 또는 PC에서 바로 접속**:
-   - 🌐 **[무료 웹 버전 즉시 접속하기](https://lainholic.github.io/Synapse_Eegine/)** (아이폰 / 안드로이드 / 태블릿 / PC)
+   - 🌐 **[무료 웹 버전 즉시 접속하기](https://lainholic.github.io/Synapse_Engine/)** (아이폰 / 안드로이드 / 태블릿 / PC)
    - 또는 Releases에서 `Synapse_Engine.html` 단독 파일을 다운받아 더블 클릭하여 실행합니다.
 2. **무료 API Key 입력**:
    - 좌측 서랍 메뉴(◀) 열기 ➔ **[AI 모델 설정]** 클릭.
